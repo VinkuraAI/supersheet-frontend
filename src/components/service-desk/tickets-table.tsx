@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
-import { Plus } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 
 type Ticket = {
   key: string
@@ -119,6 +119,7 @@ function TruncatedCell({
 
 export function TicketsTable() {
   const [data, setData] = useState<Ticket[]>(initialData)
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
     checkbox: 50,
     type: 60,
@@ -205,6 +206,34 @@ export function TicketsTable() {
     setData((prev) => [...prev, newRow])
   }
 
+  // Delete selected rows
+  const handleDeleteRows = () => {
+    setData((prev) => prev.filter((_, index) => !selectedRows.has(index)))
+    setSelectedRows(new Set())
+  }
+
+  // Handle individual row selection
+  const handleRowSelect = (rowIndex: number, checked: boolean) => {
+    setSelectedRows((prev) => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(rowIndex)
+      } else {
+        newSet.delete(rowIndex)
+      }
+      return newSet
+    })
+  }
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(new Set(data.map((_, index) => index)))
+    } else {
+      setSelectedRows(new Set())
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex gap-2 p-3 border-b bg-card">
@@ -224,6 +253,16 @@ export function TicketsTable() {
           <Plus className="size-4" />
           Add Column
         </Button>
+        <Button
+          onClick={handleDeleteRows}
+          size="sm"
+          variant="destructive"
+          className="gap-2"
+          disabled={selectedRows.size === 0}
+        >
+          <Trash2 className="size-4" />
+          Delete Row{selectedRows.size > 1 ? 's' : ''}
+        </Button>
       </div>
 
       <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-primary w-full pr-5">
@@ -234,7 +273,11 @@ export function TicketsTable() {
                 className="border-r bg-muted/30 relative"
                 style={{ width: columnWidths.checkbox, minWidth: columnWidths.checkbox }}
               >
-                <Checkbox aria-label="Select all" />
+                <Checkbox 
+                  aria-label="Select all" 
+                  checked={selectedRows.size === data.length && data.length > 0}
+                  onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                />
                 <div
                   className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
                   onMouseDown={(e) => handleMouseDown("checkbox", e)}
