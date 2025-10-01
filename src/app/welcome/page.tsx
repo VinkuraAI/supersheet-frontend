@@ -144,7 +144,7 @@ const workTypes = [
 
 const hrOptions = [
   {
-    id: 'were-hiring',
+    id: 'Hiring',
     name: "We're Hiring",
     icon: HiringIcon,
     bgColor: 'bg-green-50',
@@ -152,7 +152,7 @@ const hrOptions = [
     textColor: 'text-green-700'
   },
   {
-    id: 'employee-management', 
+    id: 'Employee Management', 
     name: 'Employee Management',
     icon: EmployeeManagementIcon,
     bgColor: 'bg-blue-50',
@@ -160,7 +160,7 @@ const hrOptions = [
     textColor: 'text-blue-700'
   },
   {
-    id: 'project-management',
+    id: 'Project Management',
     name: 'Project Management',
     icon: ProjectManagementIcon,
     bgColor: 'bg-purple-50',
