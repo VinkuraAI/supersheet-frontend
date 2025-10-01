@@ -219,54 +219,188 @@ export default function WelcomePage() {
             exit={{ opacity: 0, y: -20 }}
             className="text-center"
           >
-            <div className="mb-8">
-              {/* Enhanced Logo Section */}
+            {/* Enhanced Logo Section with Animation */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: -30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
+              className="flex items-center justify-center gap-4 mb-10"
+            >
+              {/* Animated Logo Container with Pulse Effect */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                className="flex items-center justify-center gap-3 mb-8"
+                animate={{ 
+                  boxShadow: [
+                    "0 10px 30px rgba(59, 130, 246, 0.3)",
+                    "0 10px 40px rgba(59, 130, 246, 0.5)",
+                    "0 10px 30px rgba(59, 130, 246, 0.3)"
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="relative w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg"
               >
-                {/* Logo Container: Gradient #2563EB to #1D4ED8 with shadow */}
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <Grid3x3 className="w-8 h-8 text-white" />
-                </div>
-                <h1 className="text-4xl font-bold text-slate-800">
-                  <span className="bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">Supersheet</span>
-                </h1>
+                <motion.div
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Grid3x3 className="w-9 h-9 text-white" />
+                </motion.div>
+                
+                {/* Decorative glow ring */}
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 rounded-2xl border-2 border-blue-400"
+                />
               </motion.div>
               
-              {/* Welcome Card with refined styling */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="max-w-md mx-auto mb-10 bg-white border border-slate-200 rounded-2xl p-8 shadow-xl shadow-slate-200/50"
-              >
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-4">
-                  Welcome to Supersheet! 👋
-                </h2>
-                <p className="text-slate-600 text-lg leading-relaxed">
-                  We're excited to help you streamline your workflow and boost productivity. 
-                  Let's get you set up with the perfect workspace for your needs.
-                </p>
-              </motion.div>
+              <div>
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="text-5xl font-bold"
+                >
+                  <span className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent">
+                    Supersheet
+                  </span>
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.5 }}
+                  className="text-sm text-slate-500 font-medium tracking-wide"
+                >
+                  Your workspace, simplified
+                </motion.p>
+              </div>
+            </motion.div>
+            
+            {/* Enhanced Welcome Card with Better Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="max-w-2xl mx-auto mb-10"
+            >
+              <div className="bg-white border-2 border-slate-200 rounded-3xl p-10 shadow-2xl shadow-slate-300/50 relative overflow-hidden">
+                {/* Decorative background elements */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full blur-3xl opacity-30 -translate-y-32 translate-x-32" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-100 to-pink-100 rounded-full blur-3xl opacity-30 translate-y-24 -translate-x-24" />
+                
+                <div className="relative z-10">
+                  {/* Welcome Badge */}
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.4, type: "spring" }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-full mb-6"
+                  >
+                    <span className="text-2xl">👋</span>
+                    <span className="text-sm font-semibold text-blue-700">Welcome aboard!</span>
+                  </motion.div>
+                  
+                  {/* Main Heading */}
+                  <motion.h2
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6, duration: 0.5 }}
+                    className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-4 leading-tight"
+                  >
+                    Let's build something amazing together
+                  </motion.h2>
+                  
+                  {/* Description */}
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7, duration: 0.5 }}
+                    className="text-slate-600 text-lg leading-relaxed mb-8 max-w-xl mx-auto"
+                  >
+                    Transform the way you work with powerful tools designed to streamline your workflow, 
+                    boost team collaboration, and accelerate productivity. Your journey to better work starts here.
+                  </motion.p>
+                  
+                  {/* Feature Pills */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8, duration: 0.5 }}
+                    className="flex flex-wrap items-center justify-center gap-3 mb-8"
+                  >
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-full">
+                      <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm font-medium text-emerald-700">Easy Setup</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 rounded-full">
+                      <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                      </svg>
+                      <span className="text-sm font-medium text-purple-700">Team Ready</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-full">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm font-medium text-blue-700">Lightning Fast</span>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
 
-              {/* Enhanced Get Started Button */}
+            {/* Enhanced Get Started Button with Icon */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9, duration: 0.5 }}
+              className="space-y-4"
+            >
               <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
                 onClick={handleSkip}
-                className="px-10 py-4 rounded-xl font-semibold text-white text-lg
-                         bg-gradient-to-r from-blue-500 to-blue-600
-                         hover:from-blue-600 hover:to-blue-700 hover:scale-[1.02]
-                         shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-600/40
-                         transition-all duration-200"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                className="group relative px-12 py-5 rounded-2xl font-bold text-white text-lg
+                         bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700
+                         hover:from-blue-600 hover:via-blue-700 hover:to-blue-800
+                         shadow-xl shadow-blue-500/40 hover:shadow-2xl hover:shadow-blue-600/50
+                         transition-all duration-300 overflow-hidden"
               >
-                Get Started →
+                {/* Animated shine effect */}
+                <motion.div
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                />
+                
+                <span className="relative flex items-center gap-3">
+                  Get Started
+                  <motion.svg 
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    className="w-5 h-5" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </motion.svg>
+                </span>
               </motion.button>
-            </div>
+              
+              {/* Subtle helper text */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.1, duration: 0.5 }}
+                className="text-sm text-slate-500"
+              >
+                Takes less than 2 minutes ⏱️
+              </motion.p>
+            </motion.div>
           </motion.div>
         )}
 
