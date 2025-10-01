@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Plus } from "lucide-react"
 
@@ -89,22 +89,49 @@ function StatusPill({ status }: { status: Ticket["status"] }) {
   )
 }
 
+// Truncated Cell Component with Popover
+function TruncatedCell({ 
+  content, 
+  onDoubleClick 
+}: { 
+  content: string
+  onDoubleClick?: () => void 
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <div 
+          className="cursor-pointer hover:text-primary hover:underline truncate w-full text-left"
+          onDoubleClick={onDoubleClick}
+          title={content}
+        >
+          {content}
+        </div>
+      </PopoverTrigger>
+      <PopoverContent className="max-w-md p-4" side="top">
+        <div className="text-sm whitespace-pre-wrap break-words">
+          {content}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function TicketsTable() {
   const [data, setData] = useState<Ticket[]>(initialData)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
     checkbox: 50,
     type: 60,
-    key: 120,
-    summary: 350,
-    reporter: 180,
-    assignee: 220,
-    status: 220,
-    created: 160,
-    sla: 200,
+    key: 100,
+    summary: 200,
+    reporter: 120,
+    assignee: 150,
+    status: 180,
+    created: 100,
+    sla: 140,
   })
   const [editingCell, setEditingCell] = useState<{ row: number; col: string } | null>(null)
   const [editValue, setEditValue] = useState("")
-  const [expandedContent, setExpandedContent] = useState<string | null>(null)
   const resizingRef = useRef<{ col: string; startX: number; startWidth: number } | null>(null)
 
   // Handle column resize
@@ -178,11 +205,6 @@ export function TicketsTable() {
     setData((prev) => [...prev, newRow])
   }
 
-  // Truncate text helper
-  const truncate = (text: string, maxLength = 50) => {
-    return text.length > maxLength ? text.slice(0, maxLength) + "..." : text
-  }
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex gap-2 p-3 border-b bg-card">
@@ -204,7 +226,7 @@ export function TicketsTable() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-primary">
+      <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-primary w-full pr-5">
         <Table>
           <TableHeader>
             <TableRow>
@@ -326,9 +348,8 @@ export function TicketsTable() {
                   )}
                 </TableCell>
                 <TableCell
-                  className="border-r font-medium bg-muted/30"
-                  style={{ width: columnWidths.key }}
-                  onDoubleClick={() => handleDoubleClick(rowIndex, "key", t.key)}
+                  className="border-r font-medium bg-muted/30 overflow-hidden"
+                  style={{ width: columnWidths.key, maxWidth: columnWidths.key }}
                 >
                   {editingCell?.row === rowIndex && editingCell?.col === "key" ? (
                     <Input
@@ -340,14 +361,15 @@ export function TicketsTable() {
                       className="h-7"
                     />
                   ) : (
-                    t.key
+                    <TruncatedCell 
+                      content={t.key} 
+                      onDoubleClick={() => handleDoubleClick(rowIndex, "key", t.key)}
+                    />
                   )}
                 </TableCell>
                 <TableCell
-                  className="border-r bg-background cursor-pointer"
-                  style={{ width: columnWidths.summary }}
-                  onClick={() => t.summary.length > 50 && setExpandedContent(t.summary)}
-                  onDoubleClick={() => handleDoubleClick(rowIndex, "summary", t.summary)}
+                  className="border-r bg-background overflow-hidden"
+                  style={{ width: columnWidths.summary, maxWidth: columnWidths.summary }}
                 >
                   {editingCell?.row === rowIndex && editingCell?.col === "summary" ? (
                     <Input
@@ -359,13 +381,15 @@ export function TicketsTable() {
                       className="h-7"
                     />
                   ) : (
-                    <span className={t.summary.length > 50 ? "hover:underline" : ""}>{truncate(t.summary)}</span>
+                    <TruncatedCell 
+                      content={t.summary} 
+                      onDoubleClick={() => handleDoubleClick(rowIndex, "summary", t.summary)}
+                    />
                   )}
                 </TableCell>
                 <TableCell
-                  className="border-r text-muted-foreground bg-muted/30"
-                  style={{ width: columnWidths.reporter }}
-                  onDoubleClick={() => handleDoubleClick(rowIndex, "reporter", t.reporter)}
+                  className="border-r text-muted-foreground bg-muted/30 overflow-hidden"
+                  style={{ width: columnWidths.reporter, maxWidth: columnWidths.reporter }}
                 >
                   {editingCell?.row === rowIndex && editingCell?.col === "reporter" ? (
                     <Input
@@ -377,28 +401,40 @@ export function TicketsTable() {
                       className="h-7"
                     />
                   ) : (
-                    t.reporter
+                    <TruncatedCell 
+                      content={t.reporter} 
+                      onDoubleClick={() => handleDoubleClick(rowIndex, "reporter", t.reporter)}
+                    />
                   )}
                 </TableCell>
-                <TableCell className="border-r bg-background" style={{ width: columnWidths.assignee }}>
+                <TableCell 
+                  className="border-r bg-background overflow-hidden" 
+                  style={{ width: columnWidths.assignee, maxWidth: columnWidths.assignee }}
+                >
                   {t.assignee ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="size-6">
+                    <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                      <Avatar className="size-6 flex-shrink-0">
                         <AvatarFallback className="text-xs">{t.assignee.initials}</AvatarFallback>
                       </Avatar>
-                      <span>{t.assignee.name}</span>
+                      <div className="min-w-0 flex-1">
+                        <TruncatedCell 
+                          content={t.assignee.name} 
+                        />
+                      </div>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground">Unassigned</span>
+                    <span className="text-muted-foreground text-sm">Unassigned</span>
                   )}
                 </TableCell>
-                <TableCell className="border-r bg-muted/30" style={{ width: columnWidths.status }}>
+                <TableCell 
+                  className="border-r bg-muted/30 overflow-hidden" 
+                  style={{ width: columnWidths.status, maxWidth: columnWidths.status }}
+                >
                   <StatusPill status={t.status} />
                 </TableCell>
                 <TableCell
-                  className="border-r bg-background"
-                  style={{ width: columnWidths.created }}
-                  onDoubleClick={() => handleDoubleClick(rowIndex, "created", t.created)}
+                  className="border-r bg-background overflow-hidden"
+                  style={{ width: columnWidths.created, maxWidth: columnWidths.created }}
                 >
                   {editingCell?.row === rowIndex && editingCell?.col === "created" ? (
                     <Input
@@ -410,13 +446,15 @@ export function TicketsTable() {
                       className="h-7"
                     />
                   ) : (
-                    t.created
+                    <TruncatedCell 
+                      content={t.created} 
+                      onDoubleClick={() => handleDoubleClick(rowIndex, "created", t.created)}
+                    />
                   )}
                 </TableCell>
                 <TableCell
-                  className="bg-muted/30"
-                  style={{ width: columnWidths.sla }}
-                  onDoubleClick={() => handleDoubleClick(rowIndex, "sla", t.sla)}
+                  className="bg-muted/30 overflow-hidden"
+                  style={{ width: columnWidths.sla, maxWidth: columnWidths.sla }}
                 >
                   {editingCell?.row === rowIndex && editingCell?.col === "sla" ? (
                     <Input
@@ -428,7 +466,10 @@ export function TicketsTable() {
                       className="h-7"
                     />
                   ) : (
-                    t.sla
+                    <TruncatedCell 
+                      content={t.sla} 
+                      onDoubleClick={() => handleDoubleClick(rowIndex, "sla", t.sla)}
+                    />
                   )}
                 </TableCell>
               </TableRow>
@@ -436,15 +477,6 @@ export function TicketsTable() {
           </TableBody>
         </Table>
       </div>
-
-      <Dialog open={!!expandedContent} onOpenChange={() => setExpandedContent(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Full Content</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-sm">{expandedContent}</div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
