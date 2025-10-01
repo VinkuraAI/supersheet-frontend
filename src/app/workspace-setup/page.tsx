@@ -1,43 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Grid3x3, Upload, FileText, ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import apiClient from "@/utils/api.client";
 
-/**
- * DESIGN SYSTEM SPECIFICATION
- * 
- * COLOR PALETTE:
- * - Primary Blue: #3B82F6 (buttons, active states, accents)
- * - Dark Blue: #2563EB (button hovers, darker accents)
- * - Light Blue: #EFF6FF (blue backgrounds), #DBEAFE (lighter variant)
- * - Slate Dark: #1E293B (primary text), #334155 (secondary text)
- * - Slate Medium: #64748B (tertiary text, labels)
- * - Slate Light: #94A3B8 (placeholder text), #CBD5E1 (borders)
- * - Slate Bg: #F1F5F9 (light backgrounds), #F8FAFC (lighter variant)
- * - White: #FFFFFF (card backgrounds, input backgrounds)
- * - Green Success: #10B981 (success states), #059669 (darker variant)
- * - Red Error: #DC2626 (error states), #B91C1C (darker variant)
- * 
- * COMPONENT STATES:
- * Buttons (Primary):
- * - Default: bg-gradient(from-blue-500 to-blue-600), text-white, shadow-blue-500/30
- * - Hover: bg-gradient(from-blue-600 to-blue-700), scale-102, shadow-blue-600/40
- * - Disabled: bg-slate-300, text-slate-500, no-shadow
- * 
- * Input Fields:
- * - Default: bg-white, border-slate-300 (2px), text-slate-800
- * - Hover: border-slate-400
- * - Focus: border-blue-500, ring-blue-500/20 (4px ring)
- * 
- * Cards:
- * - Container: bg-white, border-slate-200, shadow-slate-200/50
- * - Hover: shadow increases
- */
-
-export default function WorkspaceSetupPage() {
+function WorkspaceSetup() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState<'workspace-name' | 'job-description'>('workspace-name');
   const [workspaceName, setWorkspaceName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -96,14 +67,26 @@ export default function WorkspaceSetupPage() {
     }
   };
 
-  const handleFinalSubmit = () => {
-    console.log('Workspace Setup Complete:', { 
-      workspaceName, 
-      jobDescription: jobDescription || uploadedFile?.name,
-      uploadedFile: uploadedFile?.name
-    });
-    // Save the data and navigate to the table page
-    router.push('/table');
+  const handleFinalSubmit = async () => {
+    const workType = searchParams.get('workType');
+    const hrOption = searchParams.get('hrOption');
+
+    const payload = {
+      name: workspaceName,
+      mainFocus: workType,
+      primaryHRNeed: hrOption,
+      jd: jobDescription,
+      requirements: [], // Sending empty array as per instruction
+      table: {}, // Sending empty object as per instruction
+    };
+
+    try {
+      const response = await apiClient.post('/api/workspaces', payload);
+      console.log('Backend response:', response.data);
+      router.push('/table');
+    } catch (error) {
+      console.error('Error creating workspace:', error);
+    }
   };
 
   return (
@@ -142,8 +125,7 @@ export default function WorkspaceSetupPage() {
             {/* Step 1 Indicator */}
             <div className="flex flex-col items-center gap-2">
               {/* Active Step Circle: Gradient #3B82F6 to #2563EB, Shadow with 25% opacity */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                currentStep === 'workspace-name' 
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${currentStep === 'workspace-name' 
                   ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25 ring-4 ring-blue-100' 
                   : 'bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/25'
               }`}>
@@ -153,37 +135,29 @@ export default function WorkspaceSetupPage() {
                 </span>
               </div>
               {/* Step Label: Gray #64748B for inactive, Blue #3B82F6 for active */}
-              <span className={`text-xs font-medium ${
-                currentStep === 'workspace-name' ? 'text-blue-600' : 'text-slate-500'
-              }`}>
+              <span className={`text-xs font-medium ${currentStep === 'workspace-name' ? 'text-blue-600' : 'text-slate-500'}`}>
                 Workspace
               </span>
             </div>
             
             {/* Progress Connector Bar */}
             {/* Active: Gradient #3B82F6 to #2563EB, Inactive: #E2E8F0 */}
-            <div className={`h-1 w-16 sm:w-24 rounded-full transition-all duration-500 ${
-              currentStep === 'job-description' 
+            <div className={`h-1 w-16 sm:w-24 rounded-full transition-all duration-500 ${currentStep === 'job-description' 
                 ? 'bg-gradient-to-r from-blue-500 to-blue-600' 
                 : 'bg-slate-200'
             }`} />
             
             {/* Step 2 Indicator */}
             <div className="flex flex-col items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                currentStep === 'job-description' 
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${currentStep === 'job-description' 
                   ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25 ring-4 ring-blue-100' 
                   : 'bg-slate-200'
               }`}>
-                <span className={`text-sm font-semibold ${
-                  currentStep === 'job-description' ? 'text-white' : 'text-slate-400'
-                }`}>
+                <span className={`text-sm font-semibold ${currentStep === 'job-description' ? 'text-white' : 'text-slate-400'}`}>
                   2
                 </span>
               </div>
-              <span className={`text-xs font-medium ${
-                currentStep === 'job-description' ? 'text-blue-600' : 'text-slate-500'
-              }`}>
+              <span className={`text-xs font-medium ${currentStep === 'job-description' ? 'text-blue-600' : 'text-slate-500'}`}>
                 Job Description
               </span>
             </div>
@@ -374,8 +348,7 @@ export default function WorkspaceSetupPage() {
                     setUploadedFile(null);
                     setJobDescription('');
                   }}
-                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${
-                    !uploadedFile 
+                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${!uploadedFile 
                       ? 'border-blue-500 text-blue-600 bg-white shadow-sm' 
                       : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
@@ -395,8 +368,7 @@ export default function WorkspaceSetupPage() {
                 
                 {/* Upload File Tab */}
                 <button
-                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${
-                    uploadedFile 
+                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${uploadedFile 
                       ? 'border-blue-500 text-blue-600 bg-white shadow-sm' 
                       : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
@@ -443,21 +415,7 @@ export default function WorkspaceSetupPage() {
                       id="job-description"
                       value={jobDescription}
                       onChange={(e) => setJobDescription(e.target.value)}
-                      placeholder="Paste your job description here...
-
-Example:
-We are looking for a Senior Software Engineer to join our growing team. You will be responsible for developing scalable web applications, mentoring junior developers, and contributing to architectural decisions.
-
-Requirements:
-• 5+ years of experience in software development
-• Proficiency in React, Node.js, and TypeScript
-• Experience with cloud platforms (AWS, Azure, or GCP)
-• Strong communication skills
-
-Benefits:
-• Competitive salary and equity package
-• Remote-first culture
-• Health insurance and wellness programs"
+                      placeholder="Paste your job description here...\n\nExample:\nWe are looking for a Senior Software Engineer to join our growing team. You will be responsible for developing scalable web applications, mentoring junior developers, and contributing to architectural decisions.\n\nRequirements:\n• 5+ years of experience in software development\n• Proficiency in React, Node.js, and TypeScript\n• Experience with cloud platforms (AWS, Azure, or GCP)\n• Strong communication skills\n\nBenefits:\n• Competitive salary and equity package\n• Remote-first culture\n• Health insurance and wellness programs"
                       rows={14}
                       className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl 
                                focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 
@@ -496,8 +454,7 @@ Benefits:
                     {/* Drag Active: Border #3B82F6 (3px), Background #EFF6FF */}
                     {/* Hover: Border #94A3B8, Background #F8FAFC */}
                     <div
-                      className={`relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-300 ${
-                        dragActive 
+                      className={`relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-300 ${dragActive 
                           ? 'border-blue-500 bg-blue-50 border-3' 
                           : 'border-slate-300 hover:border-slate-400 bg-slate-50 hover:bg-slate-100'
                       }`}
@@ -557,14 +514,11 @@ Benefits:
                           {/* Upload Icon Container */}
                           {/* Default: Background #F1F5F9, Icon #64748B */}
                           {/* Drag Active: Background #DBEAFE, Icon #3B82F6 */}
-                          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center transition-all duration-300 ${
-                            dragActive 
+                          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center transition-all duration-300 ${dragActive 
                               ? 'bg-blue-100 scale-110' 
                               : 'bg-slate-200'
                           }`}>
-                            <Upload className={`w-8 h-8 transition-colors duration-300 ${
-                              dragActive ? 'text-blue-600' : 'text-slate-500'
-                            }`} />
+                            <Upload className={`w-8 h-8 transition-colors duration-300 ${dragActive ? 'text-blue-600' : 'text-slate-500'}`} />
                           </div>
                           
                           {/* Upload Instructions */}
@@ -651,4 +605,12 @@ Benefits:
       </div>
     </div>
   );
+}
+
+export default function WorkspaceSetupPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <WorkspaceSetup />
+        </Suspense>
+    )
 }

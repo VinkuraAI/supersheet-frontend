@@ -689,8 +689,8 @@ export default function WelcomePage() {
                 >
                   <button
                     onClick={() => {
-                      if (selectedHrOption === 'were-hiring') {
-                        router.push('/workspace-setup');
+                      if (selectedHrOption) {
+                        router.push(`/workspace-setup?workType=${selectedWorkType}&hrOption=${selectedHrOption}`);
                       } else {
                         console.log('HR Selection:', { 
                           workType: 'human-resources', 

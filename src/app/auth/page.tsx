@@ -1,20 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import SignupForm from "../../components/auth/SignupForm";
 import LoginForm from "../../components/auth/LoginForm";
 
-export default function AuthPage() {
+function AuthPageComponent() {
   const [isLogin, setIsLogin] = useState(false);
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const login = searchParams.get('login')
+    if (login === 'true') {
+      setIsLogin(true)
+    }
+  }, [searchParams])
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4 relative">
       {/* Back Button */}
-      <Link 
-        href="/" 
+      <Link
+        href="/"
         className="absolute top-6 left-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
       >
         <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
@@ -64,8 +73,8 @@ export default function AuthPage() {
               onClick={() => setIsLogin(!isLogin)}
               className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >
-              {isLogin 
-                ? "Don't have an account? Sign up" 
+              {isLogin
+                ? "Don't have an account? Sign up"
                 : "Already have an account? Sign in"
               }
             </button>
@@ -86,4 +95,12 @@ export default function AuthPage() {
       </div>
     </div>
   );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthPageComponent />
+    </Suspense>
+  )
 }

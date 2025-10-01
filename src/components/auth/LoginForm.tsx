@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import apiClient from "@/utils/api.client";
+import { AxiosError } from "axios";
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -15,7 +16,6 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const { login } = useAuth();
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,11 +49,19 @@ export default function LoginForm() {
     
     setIsLoading(true);
     try {
-      await login(formData.email, formData.password);
+      const response = await apiClient.post("/api/users/login", formData);
+      console.log(response.data);
       // Redirect to welcome page after successful login
       router.push('/welcome');
     } catch (error: any) {
-      setErrors({ general: error.message });
+        if(error instanceof AxiosError){
+            console.log(error.response?.data?.message || "Somthing went wrong");
+            setErrors({ general: error.response?.data?.message || "Something went wrong" });
+        }
+        else{
+            console.log(error);
+            setErrors({ general: error.message });
+        }
     } finally {
       setIsLoading(false);
     }
