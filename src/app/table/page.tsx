@@ -18,7 +18,7 @@ export default function ServiceDeskPage() {
       const width = window.innerWidth
       
       // Close both sidebars when screen is too narrow (below 1280px)
-      if (width < 1872) {
+      if (width < 1272) {
         setLeftSidebarOpen(false)
         setRightSidebarOpen(false)
       }

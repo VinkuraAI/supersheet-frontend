@@ -38,17 +38,7 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
       <div className="hidden min-w-0 md:block">
         <Breadcrumb>
           <BreadcrumbList className="text-sm">
-            <BreadcrumbItem>
-              <BreadcrumbLink href="#">Projects</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href="#">Demo service project</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Queues</BreadcrumbPage>
-            </BreadcrumbItem>
+          Workspace Fetched By Backend
           </BreadcrumbList>
         </Breadcrumb>
       </div>
