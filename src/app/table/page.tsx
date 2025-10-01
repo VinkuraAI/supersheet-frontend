@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { TopBar } from "@/components/service-desk/topbar"
 import { SideNav } from "@/components/service-desk/sidenav"
 import { FiltersBar } from "@/components/service-desk/filters-bar"
@@ -11,6 +11,28 @@ import { AiChatWidget } from "@/components/service-desk/ai-chat-widget"
 export default function ServiceDeskPage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
+
+  // Handle responsive sidebar behavior
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth
+      
+      // Close both sidebars when screen is too narrow (below 1280px)
+      if (width < 1872) {
+        setLeftSidebarOpen(false)
+        setRightSidebarOpen(false)
+      }
+    }
+
+    // Run on mount
+    handleResize()
+
+    // Add event listener
+    window.addEventListener('resize', handleResize)
+
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize)
+  }, [leftSidebarOpen, rightSidebarOpen])
 
   return (
     <main className="min-h-dvh flex flex-col">
@@ -41,12 +63,12 @@ export default function ServiceDeskPage() {
         {/* Center content - adjusts margin based on sidebar state */}
         <div
           className={`
-            flex-1 flex flex-col transition-all duration-300 pb-24
+            flex-1 flex flex-col transition-all duration-300 pb-24 w-fulln
             ${leftSidebarOpen ? "ml-[260px]" : "ml-0"}
             ${rightSidebarOpen ? "mr-[320px]" : "mr-0"}
           `}
         >
-          <div className="flex-1 flex flex-col gap-3 p-4 overflow-hidden">
+          <div className="flex-1 flex flex-col gap-3 p-4 overflow-hidden w-full ">
             <div className="bg-card border rounded-md flex-shrink-0">
               <div className="flex items-center justify-between border-b px-4 py-3">
                 <h1 className="text-lg font-semibold text-pretty">All open</h1>

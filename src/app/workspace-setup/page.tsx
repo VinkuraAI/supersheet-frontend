@@ -102,7 +102,8 @@ export default function WorkspaceSetupPage() {
       jobDescription: jobDescription || uploadedFile?.name,
       uploadedFile: uploadedFile?.name
     });
-    // Here you would typically save the data and navigate to the next step
+    // Save the data and navigate to the table page
+    router.push('/table');
   };
 
   return (
