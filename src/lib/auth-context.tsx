@@ -1,6 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext,useEffect, useContext, useState } from 'react';
+import apiClient from '@/utils/api.client';
+import { AxiosError } from 'axios';
 
 interface User {
   id: string;
@@ -20,27 +22,45 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      localStorage.removeItem("user");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login with specific credentials
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check mock credentials
-      if (email === 'user123' && password === 'user123') {
-        // Mock user data
-        setUser({
-          id: '1',
-          email,
-          name: 'John Doe'
-        });
+      const response = await apiClient.post("/api/users/login", { email, password });
+      if (response.data && response.data.user) {
+        const backendUser = response.data.user;
+        const appUser: User = {
+          id: backendUser.id,
+          email: backendUser.email,
+          name: backendUser.user_metadata.name,
+        };
+        localStorage.setItem("user", JSON.stringify(appUser));
+        console.log("yeh dekh set kar rhaahu ",appUser);
+        setUser(appUser);
       } else {
-        throw new Error('Invalid credentials. Use user123/user123 to login.');
+        throw new Error("Login failed: Invalid user data received.");
       }
-    } catch (error) {
-      throw error;
+    } catch (err) {
+        // Re-throw the error to be caught in the form
+        if (err instanceof AxiosError && err.response) {
+            throw new Error(err.response.data.message || "An unknown error occurred");
+        }
+        throw err;
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    localStorage.removeItem("user");
     setUser(null);
   };
 
