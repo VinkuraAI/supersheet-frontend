@@ -11,6 +11,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Bell, HelpCircle, Settings, Plus, Menu } from "lucide-react"
+import { useWorkspace } from "@/lib/workspace-context"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface TopBarProps {
   onToggleLeftSidebar: () => void
@@ -19,6 +21,8 @@ interface TopBarProps {
 }
 
 export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebarOpen }: TopBarProps) {
+  const { selectedWorkspace, isLoading } = useWorkspace();
+
   return (
     <div className="mx-auto flex w-full items-center gap-3 p-3">
       <Button
@@ -38,7 +42,17 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
       <div className="hidden min-w-0 md:block">
         <Breadcrumb>
           <BreadcrumbList className="text-sm">
-          Workspace Fetched By Backend
+            {isLoading ? (
+              <Skeleton className="h-5 w-32" />
+            ) : selectedWorkspace ? (
+              <BreadcrumbItem>
+                <BreadcrumbPage>{selectedWorkspace.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            ) : (
+              <BreadcrumbItem>
+                <BreadcrumbPage>No workspace selected</BreadcrumbPage>
+              </BreadcrumbItem>
+            )}
           </BreadcrumbList>
         </Breadcrumb>
       </div>

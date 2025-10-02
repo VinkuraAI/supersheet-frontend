@@ -274,6 +274,7 @@ export function TicketsTable() {
                 style={{ width: columnWidths.checkbox, minWidth: columnWidths.checkbox }}
               >
                 <Checkbox 
+
                   aria-label="Select all" 
                   checked={selectedRows.size === data.length && data.length > 0}
                   onCheckedChange={(checked) => handleSelectAll(checked === true)}
@@ -368,8 +369,16 @@ export function TicketsTable() {
           <TableBody>
             {data.map((t, rowIndex) => (
               <TableRow key={t.key} className="hover:bg-primary/5">
-                <TableCell className="border-r bg-muted/30" style={{ width: columnWidths.checkbox }}>
-                  <Checkbox aria-label={`Select ${t.key}`} />
+                <TableCell 
+                  className="border-r bg-muted/30 cursor-pointer"
+                  style={{ width: columnWidths.checkbox }}
+                  onClick={() => handleRowSelect(rowIndex, !selectedRows.has(rowIndex))}
+                >
+                  <Checkbox 
+                    aria-label={`Select ${t.key}`}
+                    checked={selectedRows.has(rowIndex)}
+                    onCheckedChange={(checked) => handleRowSelect(rowIndex, checked === true)}
+                  />
                 </TableCell>
                 <TableCell className="border-r text-center bg-background" style={{ width: columnWidths.type }}>
                   {editingCell?.row === rowIndex && editingCell?.col === "type" ? (
