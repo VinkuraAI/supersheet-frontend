@@ -1,19 +1,18 @@
 "use client";
 
+import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
-import apiClient from "@/utils/api.client";
-import { AxiosError } from "axios";
 
 export default function LoginForm() {
+  const { login, isLoading } = useAuth();
   const [formData, setFormData] = useState({
     email: "user123",
     password: "user123",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const router = useRouter();
@@ -47,23 +46,12 @@ export default function LoginForm() {
     
     if (!validateForm()) return;
     
-    setIsLoading(true);
     try {
-      const response = await apiClient.post("/api/users/login", formData);
-      console.log(response.data);
+      await login(formData.email, formData.password);
       // Redirect to welcome page after successful login
       router.push('/welcome');
     } catch (error: any) {
-        if(error instanceof AxiosError){
-            console.log(error.response?.data?.message || "Somthing went wrong");
-            setErrors({ general: error.response?.data?.message || "Something went wrong" });
-        }
-        else{
-            console.log(error);
-            setErrors({ general: error.message });
-        }
-    } finally {
-      setIsLoading(false);
+      setErrors({ general: error.message || "Something went wrong" });
     }
   };
 

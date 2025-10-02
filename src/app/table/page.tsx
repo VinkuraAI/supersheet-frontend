@@ -8,6 +8,12 @@ import { TicketsTable } from "@/components/service-desk/tickets-table"
 import { RightPanel } from "@/components/service-desk/right-panel"
 import { AiChatWidget } from "@/components/service-desk/ai-chat-widget"
 
+import { WorkspaceProvider } from "@/lib/workspace-context";
+
+import { NoWorkspaceSelected } from "@/components/service-desk/no-workspace-selected";
+import { useWorkspace } from "@/lib/workspace-context";
+import { Skeleton } from "@/components/ui/skeleton";
+
 export default function ServiceDeskPage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
@@ -33,6 +39,21 @@ export default function ServiceDeskPage() {
     // Cleanup
     return () => window.removeEventListener('resize', handleResize)
   }, [leftSidebarOpen, rightSidebarOpen])
+
+  return (
+    <WorkspaceProvider>
+      <PageContent 
+        leftSidebarOpen={leftSidebarOpen} 
+        rightSidebarOpen={rightSidebarOpen} 
+        setLeftSidebarOpen={setLeftSidebarOpen} 
+        setRightSidebarOpen={setRightSidebarOpen} 
+      />
+    </WorkspaceProvider>
+  )
+}
+
+function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen }: any) {
+  const { selectedWorkspace, isLoading } = useWorkspace();
 
   return (
     <main className="min-h-dvh flex flex-col">
@@ -69,20 +90,31 @@ export default function ServiceDeskPage() {
           `}
         >
           <div className="flex-1 flex flex-col gap-3 p-4 overflow-hidden w-full ">
-            <div className="bg-card border rounded-md flex-shrink-0">
-              <div className="flex items-center justify-between border-b px-4 py-3">
-                <h1 className="text-lg font-semibold text-pretty">All open</h1>
+            {isLoading ? (
+              <div className="flex-1 flex flex-col gap-3 overflow-hidden w-full ">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="flex-1 w-full" />
               </div>
-              <div className="p-3">
-                <Suspense>
-                  <FiltersBar />
-                </Suspense>
-              </div>
-            </div>
+            ) : selectedWorkspace ? (
+              <>
+                <div className="bg-card border rounded-md flex-shrink-0">
+                  <div className="flex items-center justify-between border-b px-4 py-3">
+                    <h1 className="text-lg font-semibold text-pretty">All open</h1>
+                  </div>
+                  <div className="p-3">
+                    <Suspense>
+                      <FiltersBar />
+                    </Suspense>
+                  </div>
+                </div>
 
-            <div className="bg-card border rounded-md flex-1 overflow-hidden flex flex-col">
-              <TicketsTable />
-            </div>
+                <div className="bg-card border rounded-md flex-1 overflow-hidden flex flex-col">
+                  <TicketsTable />
+                </div>
+              </>
+            ) : (
+              <NoWorkspaceSelected />
+            )}
           </div>
         </div>
 
