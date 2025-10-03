@@ -75,7 +75,6 @@ export default function SignupForm() {
       // Simulate API call
       const signup = async (data: typeof formData) => {
         try {
-          console.log("sadsadadada");
           const res = await apiClient.post("/api/users/signup", data);
           console.log(res.data.message);
 

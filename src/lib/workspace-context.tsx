@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import apiClient from '@/utils/api.client';
 
 interface Workspace {
@@ -23,6 +24,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspace, setSelectedWorkspaceState] = useState<Workspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const fetchWorkspaces = async () => {
@@ -30,12 +33,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       try {
         const response = await apiClient.get<Workspace[]>("/api/workspaces/");
         setWorkspaces(response.data);
-        const lastSelectedId = localStorage.getItem("selectedWorkspaceId");
-        if (lastSelectedId) {
-          const found = response.data.find(w => w._id === lastSelectedId);
-          setSelectedWorkspaceState(found || (response.data.length > 0 ? response.data[0] : null));
-        } else if (response.data.length > 0) {
-          setSelectedWorkspaceState(response.data[0]);
+
+        const pathSegments = pathname.split('/');
+        const workspaceIdFromUrl = pathSegments.length > 2 ? pathSegments[2] : null;
+
+        if (workspaceIdFromUrl) {
+          const found = response.data.find(w => w._id === workspaceIdFromUrl);
+          setSelectedWorkspaceState(found || null);
+        } else {
+          const lastSelectedId = localStorage.getItem("selectedWorkspaceId");
+          if (lastSelectedId) {
+            const found = response.data.find(w => w._id === lastSelectedId);
+            if (found) {
+              router.push(`/workspace/${found._id}`);
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to fetch workspaces:", error);
@@ -45,14 +57,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
 
     fetchWorkspaces();
-  }, []);
+  }, [pathname, router]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {
     setSelectedWorkspaceState(workspace);
     if (workspace) {
       localStorage.setItem("selectedWorkspaceId", workspace._id);
+      router.push(`/workspace/${workspace._id}`);
     } else {
       localStorage.removeItem("selectedWorkspaceId");
+      router.push('/workspace');
     }
   };
 

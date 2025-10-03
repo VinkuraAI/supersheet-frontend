@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: backendUser.user_metadata.name,
         };
         localStorage.setItem("user", JSON.stringify(appUser));
-        console.log("yeh dekh set kar rhaahu ",appUser);
         setUser(appUser);
       } else {
         throw new Error("Login failed: Invalid user data received.");
