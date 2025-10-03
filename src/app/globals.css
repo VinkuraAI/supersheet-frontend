@@ -133,3 +133,26 @@ input:focus::placeholder {
   color: #9ca3af !important;
 }
 
+/* Markdown formatting */
+.markdown-content p {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content code {
+  background-color: oklch(0.9 0.01 240);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+

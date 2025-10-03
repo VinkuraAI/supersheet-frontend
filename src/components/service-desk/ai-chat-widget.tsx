@@ -4,12 +4,39 @@ import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { X, Send, Sparkles } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import { useWorkspace } from "@/lib/workspace-context"
+import apiClient from "@/utils/api.client"
 
 export function AiChatWidget() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState<Array<{ role: "user" | "ai"; text: string }>>([])
+  const [isLoading, setIsLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { selectedWorkspace } = useWorkspace()
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  // Load messages from sessionStorage on mount
+  useEffect(() => {
+    const storedMessages = sessionStorage.getItem("aiChatMessages")
+    if (storedMessages) {
+      setMessages(JSON.parse(storedMessages))
+    }
+  }, [])
+
+  // Save messages to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("aiChatMessages", JSON.stringify(messages))
+  }, [messages])
 
   // Handle Escape key
   useEffect(() => {
@@ -29,14 +56,30 @@ export function AiChatWidget() {
     }
   }, [isExpanded])
 
-  const handleSend = () => {
-    if (!message.trim()) return
-    setMessages((prev) => [...prev, { role: "user", text: message }])
-    // Simulate AI response
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "ai", text: "I'm here to help! How can I assist you today?" }])
-    }, 500)
+  const handleSend = async () => {
+    if (!message.trim() || !selectedWorkspace) return
+    const userMessage = { role: "user" as const, text: message }
+    setMessages((prev) => [...prev, userMessage])
     setMessage("")
+    setIsLoading(true)
+
+    try {
+      const response = await apiClient.post(
+        `/api/ai/workspace/${selectedWorkspace._id}/ask`,
+        { question: message }
+      )
+      const aiMessage = { role: "ai" as const, text: response.data.response }
+      setMessages((prev) => [...prev, aiMessage])
+    } catch (error) {
+      const errorMessage = {
+        role: "ai" as const,
+        text: "Sorry, I'm having trouble connecting. Please try again later.",
+      }
+      setMessages((prev) => [...prev, errorMessage])
+      console.error("Error asking AI:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -91,7 +134,7 @@ export function AiChatWidget() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { delay: 0.2, duration: 0.3 } }}
                 exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                className="flex-1 overflow-y-auto p-6 space-y-4"
+                className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent"
               >
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
@@ -102,24 +145,48 @@ export function AiChatWidget() {
                     </div>
                   </div>
                 ) : (
-                  messages.map((msg, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[75%] rounded-2xl px-5 py-3 ${
-                          msg.role === "user" 
-                            ? "bg-primary text-primary-foreground shadow-lg" 
-                            : "bg-muted text-foreground shadow-md"
-                        }`}
+                  <>
+                    {messages.map((msg, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                       >
-                        {msg.text}
-                      </div>
-                    </motion.div>
-                  ))
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-5 py-3 ${
+                            msg.role === "user"
+                              ? "bg-primary text-primary-foreground shadow-lg"
+                              : "bg-muted text-foreground shadow-md"
+                          }`}
+                        >
+                          {msg.role === "user" ? (
+                            msg.text
+                          ) : (
+                            <div className="markdown-content">
+                              <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                    {isLoading && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex justify-start"
+                      >
+                        <div className="max-w-[75%] rounded-2xl px-5 py-3 bg-muted text-foreground shadow-md">
+                          <div className="flex items-center space-x-2">
+                            <span className="h-2 w-2 bg-primary rounded-full animate-pulse"></span>
+                            <span className="h-2 w-2 bg-primary rounded-full animate-pulse delay-150"></span>
+                            <span className="h-2 w-2 bg-primary rounded-full animate-pulse delay-300"></span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </>
                 )}
               </motion.div>
             )}
@@ -137,9 +204,11 @@ export function AiChatWidget() {
               }`}
             >
               {/* AI Icon */}
-              <div className={`flex-shrink-0 transition-colors duration-300 ${
-                isExpanded ? "text-primary" : "text-muted-foreground"
-              }`}>
+              <div
+                className={`flex-shrink-0 transition-colors duration-300 ${
+                  isExpanded ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
                 <Sparkles className="size-6" />
               </div>
 
@@ -149,8 +218,9 @@ export function AiChatWidget() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onFocus={() => setIsExpanded(true)}
-                placeholder="Ask AI anything..."
+                placeholder={selectedWorkspace ? "Ask AI anything..." : "Please select a workspace first"}
                 className="flex-1 bg-transparent border-0 outline-none focus:outline-none text-base placeholder:text-muted-foreground/70 text-foreground"
+                disabled={!selectedWorkspace || isLoading}
               />
 
               {/* Action buttons */}
@@ -181,10 +251,10 @@ export function AiChatWidget() {
                 <Button
                   type="submit"
                   size="icon"
-                  disabled={!message.trim()}
+                  disabled={!message.trim() || isLoading}
                   className={`size-10 rounded-full transition-all duration-300 ${
-                    message.trim() 
-                      ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30" 
+                    message.trim()
+                      ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
