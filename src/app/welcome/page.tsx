@@ -145,7 +145,7 @@ const workTypes = [
 const hrOptions = [
   {
     id: 'Hiring',
-    name: "We're Hiring",
+    name: "We&apos;re Hiring",
     icon: HiringIcon,
     bgColor: 'bg-green-50',
     hoverColor: 'hover:bg-green-500',
@@ -169,18 +169,23 @@ const hrOptions = [
   }
 ];
 
+import { useAuth } from "../../lib/auth-context";
+
 export default function WelcomePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<'welcome' | 'loading' | 'selection' | 'hr-options'>('welcome');
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [selectedHrOption, setSelectedHrOption] = useState<string | null>(null);
 
-  const handleSkip = () => {
-    setCurrentStep('loading');
-    // Simulate loading for 3 seconds
-    setTimeout(() => {
+  useEffect(() => {
+    if (user) {
       setCurrentStep('selection');
-    }, 3000);
+    }
+  }, [user]);
+
+  const handleSkip = () => {
+    router.push('/workspace-setup');
   };
 
   const handleWorkTypeSelect = (workTypeId: string) => {
@@ -188,20 +193,22 @@ export default function WelcomePage() {
     if (workTypeId === 'human-resources') {
       setCurrentStep('hr-options');
     } else {
-      // For other work types, just log the selection
-      console.log('Selected work type:', workTypeId);
+      router.push(`/workspace-setup?workType=${workTypeId}`);
     }
   };
 
   const handleHrOptionSelect = (optionId: string) => {
     setSelectedHrOption(optionId);
-    console.log('Selected HR option:', optionId);
+    router.push(`/workspace-setup?workType=human-resources&hrOption=${optionId}`);
   };
 
   const handleContinue = () => {
     if (selectedWorkType) {
-      console.log('Continuing with:', selectedWorkType);
-      // Navigate to dashboard or next step
+      if (selectedWorkType === 'human-resources' && selectedHrOption) {
+        router.push(`/workspace-setup?workType=${selectedWorkType}&hrOption=${selectedHrOption}`);
+      } else {
+        router.push(`/workspace-setup?workType=${selectedWorkType}`);
+      }
     }
   };
 
@@ -617,7 +624,7 @@ export default function WelcomePage() {
                 transition={{ delay: 0.1, duration: 0.5 }}
                 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3"
               >
-                What's your HR focus?
+                What&apos;s your HR focus?
               </motion.h2>
               <motion.p
                 initial={{ opacity: 0 }}

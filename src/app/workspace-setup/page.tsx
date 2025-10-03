@@ -82,8 +82,8 @@ function WorkspaceSetup() {
 
     try {
       const response = await apiClient.post('/api/workspaces', payload);
-      console.log('Backend response:', response.data);
-      router.push('/table');
+      const newWorkspace = response.data;
+      router.push(`/workspace/${newWorkspace._id}`);
     } catch (error) {
       console.error('Error creating workspace:', error);
     }
