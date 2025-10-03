@@ -12,82 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input"
 import { Plus, Trash2 } from "lucide-react"
 
-type Ticket = {
-  key: string
-  type: "T" | "I" | "Q"
-  summary: string
-  reporter: string
-  assignee?: { name: string; initials: string }
-  status: "WAITING FOR SUPPORT" | "WAITING FOR APPROVAL" | "IN PROGRESS"
-  created: string
-  sla: string
-}
 
-const initialData: Ticket[] = [
-  {
-    key: "DEMO-4",
-    type: "T",
-    summary: "Collecting custom request details",
-    reporter: "Example Customer",
-    assignee: undefined,
-    status: "WAITING FOR APPROVAL",
-    created: "27/Sep/25",
-    sla: "Sep 30 05:00 PM",
-  },
-  {
-    key: "DEMO-3",
-    type: "I",
-    summary: "Agents & customers",
-    reporter: "Example Customer",
-    assignee: undefined,
-    status: "WAITING FOR SUPPORT",
-    created: "27/Sep/25",
-    sla: "Sep 30 05:00 PM",
-  },
-  {
-    key: "DEMO-2",
-    type: "Q",
-    summary: "Capturing customer email requests",
-    reporter: "Example Customer",
-    assignee: undefined,
-    status: "WAITING FOR SUPPORT",
-    created: "27/Sep/25",
-    sla: "Sep 30 05:00 PM",
-  },
-  {
-    key: "DEMO-1",
-    type: "Q",
-    summary: "What is a request?",
-    reporter: "Example Customer",
-    assignee: { name: "Akshit Shukla", initials: "AS" },
-    status: "WAITING FOR SUPPORT",
-    created: "27/Sep/25",
-    sla: "Sep 30 05:00 PM",
-  },
-  {
-    key: "DEMO-6",
-    type: "T",
-    summary: "Triaging requests into queues",
-    reporter: "Example Customer",
-    assignee: undefined,
-    status: "WAITING FOR SUPPORT",
-    created: "28/Sep/25",
-    sla: "Sep 30 05:00 PM",
-  },
-]
-
-function StatusPill({ status }: { status: Ticket["status"] }) {
-  const map: Record<Ticket["status"], string> = {
-    "WAITING FOR SUPPORT": "bg-secondary text-secondary-foreground",
-    "WAITING FOR APPROVAL": "bg-accent text-accent-foreground",
-    "IN PROGRESS": "bg-primary text-primary-foreground",
-  }
-  return (
-    <Badge variant="secondary" className={map[status]}>
-      {status}
-    </Badge>
-  )
-}
 
 // Truncated Cell Component with Popover
 function TruncatedCell({ 
@@ -117,26 +42,35 @@ function TruncatedCell({
   )
 }
 
-export function TicketsTable() {
-  const [data, setData] = useState<Ticket[]>(initialData)
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
-    checkbox: 50,
-    type: 60,
-    key: 100,
-    summary: 200,
-    reporter: 120,
-    assignee: 150,
-    status: 180,
-    created: 100,
-    sla: 140,
-  })
-  const [editingCell, setEditingCell] = useState<{ row: number; col: string } | null>(null)
-  const [editValue, setEditValue] = useState("")
-  const resizingRef = useRef<{ col: string; startX: number; startWidth: number } | null>(null)
+import { useWorkspace } from "@/lib/workspace-context";
+
+export function TicketsTable({ tickets, schema, setData }: {
+  tickets: any[];
+  schema: any[];
+  setData: React.Dispatch<React.SetStateAction<any[]>>;
+}) {
+  const { selectedWorkspace } = useWorkspace();
+  const disabled = !selectedWorkspace;
+
+  const [data, setInternalData] = useState(tickets);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [editingCell, setEditingCell] = useState<{ row: number; col: string } | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const resizingRef = useRef<{ col: string; startX: number; startWidth: number } | null>(null);
+
+  useEffect(() => {
+    setInternalData(tickets);
+    const initialWidths: Record<string, number> = { checkbox: 50 };
+    schema.forEach(col => {
+      initialWidths[col.name] = 150; // Default width
+    });
+    setColumnWidths(initialWidths);
+  }, [tickets, schema]);
 
   // Handle column resize
   const handleMouseDown = (col: string, e: React.MouseEvent) => {
+    if (disabled) return;
     e.preventDefault()
     resizingRef.current = {
       col,
@@ -168,52 +102,45 @@ export function TicketsTable() {
 
   // Handle double-click to edit
   const handleDoubleClick = (rowIndex: number, col: string, value: string) => {
+    if (disabled) return;
     setEditingCell({ row: rowIndex, col })
     setEditValue(value)
   }
 
-  // Save edited value
   const handleSaveEdit = () => {
-    if (!editingCell) return
-    const { row, col } = editingCell
-    setData((prev) =>
-      prev.map((item, i) =>
-        i === row
-          ? {
-              ...item,
-              [col]: editValue,
-            }
-          : item,
-      ),
-    )
-    setEditingCell(null)
-    setEditValue("")
-  }
+    if (!editingCell) return;
+    const { row, col } = editingCell;
+    const newData = data.map((item, i) =>
+      i === row
+        ? {
+            ...item,
+            data: { ...item.data, [col]: editValue },
+          }
+        : item,
+    );
+    setData(newData);
+    setEditingCell(null);
+    setEditValue("");
+  };
 
-  // Add new row
   const handleAddRow = () => {
-    const maxKey = data.length > 0 ? Math.max(...data.map((d) => Number(d.key.split("-")[1]))) : 0
-    const newRow: Ticket = {
-      key: `DEMO-${maxKey + 1}`,
-      type: "T",
-      summary: "New ticket",
-      reporter: "New Customer",
-      assignee: undefined,
-      status: "WAITING FOR SUPPORT",
-      created: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
-      sla: "TBD",
-    }
-    setData((prev) => [...prev, newRow])
-  }
+    if (disabled) return;
+    const newRow: any = { data: {} };
+    schema.forEach(col => {
+      newRow.data[col.name] = ""; // Initialize with empty strings
+    });
+    setData((prev: any) => [...prev, newRow]);
+  };
 
-  // Delete selected rows
   const handleDeleteRows = () => {
-    setData((prev) => prev.filter((_, index) => !selectedRows.has(index)))
-    setSelectedRows(new Set())
-  }
+    if (disabled) return;
+    setData((prev: any) => prev.filter((_: any, index: number) => !selectedRows.has(index)));
+    setSelectedRows(new Set());
+  };
 
   // Handle individual row selection
   const handleRowSelect = (rowIndex: number, checked: boolean) => {
+    if (disabled) return;
     setSelectedRows((prev) => {
       const newSet = new Set(prev)
       if (checked) {
@@ -227,6 +154,7 @@ export function TicketsTable() {
 
   // Handle select all
   const handleSelectAll = (checked: boolean) => {
+    if (disabled) return;
     if (checked) {
       setSelectedRows(new Set(data.map((_, index) => index)))
     } else {
@@ -235,9 +163,9 @@ export function TicketsTable() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
       <div className="flex gap-2 p-3 border-b bg-card">
-        <Button onClick={handleAddRow} size="sm" className="gap-2">
+        <Button onClick={handleAddRow} size="sm" className="gap-2" disabled={disabled}>
           <Plus className="size-4" />
           Add Row
         </Button>
@@ -249,6 +177,7 @@ export function TicketsTable() {
           size="sm"
           variant="outline"
           className="gap-2"
+          disabled={disabled}
         >
           <Plus className="size-4" />
           Add Column
@@ -258,7 +187,7 @@ export function TicketsTable() {
           size="sm"
           variant="destructive"
           className="gap-2"
-          disabled={selectedRows.size === 0}
+          disabled={selectedRows.size === 0 || disabled}
         >
           <Trash2 className="size-4" />
           Delete Row{selectedRows.size > 1 ? 's' : ''}
@@ -284,250 +213,61 @@ export function TicketsTable() {
                   onMouseDown={(e) => handleMouseDown("checkbox", e)}
                 />
               </TableHead>
-              <TableHead
-                className="border-r text-center bg-background relative"
-                style={{ width: columnWidths.type, minWidth: columnWidths.type }}
-              >
-                T
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("type", e)}
-                />
-              </TableHead>
-              <TableHead
-                className="border-r bg-muted/30 relative"
-                style={{ width: columnWidths.key, minWidth: columnWidths.key }}
-              >
-                Key
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("key", e)}
-                />
-              </TableHead>
-              <TableHead
-                className="border-r bg-background relative"
-                style={{ width: columnWidths.summary, minWidth: columnWidths.summary }}
-              >
-                Summary
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("summary", e)}
-                />
-              </TableHead>
-              <TableHead
-                className="border-r bg-muted/30 relative"
-                style={{ width: columnWidths.reporter, minWidth: columnWidths.reporter }}
-              >
-                Reporter
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("reporter", e)}
-                />
-              </TableHead>
-              <TableHead
-                className="border-r bg-background relative"
-                style={{ width: columnWidths.assignee, minWidth: columnWidths.assignee }}
-              >
-                Assignee
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("assignee", e)}
-                />
-              </TableHead>
-              <TableHead
-                className="border-r bg-muted/30 relative"
-                style={{ width: columnWidths.status, minWidth: columnWidths.status }}
-              >
-                Status
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("status", e)}
-                />
-              </TableHead>
-              <TableHead
-                className="border-r bg-background relative"
-                style={{ width: columnWidths.created, minWidth: columnWidths.created }}
-              >
-                Created
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("created", e)}
-                />
-              </TableHead>
-              <TableHead
-                className="bg-muted/30 relative"
-                style={{ width: columnWidths.sla, minWidth: columnWidths.sla }}
-              >
-                Time to resolution
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("sla", e)}
-                />
-              </TableHead>
+              {schema.map(col => (
+                <TableHead
+                  key={col.name}
+                  className="border-r bg-muted/30 relative"
+                  style={{ width: columnWidths[col.name], minWidth: columnWidths[col.name] }}
+                >
+                  {col.name}
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
+                    onMouseDown={(e) => handleMouseDown(col.name, e)}
+                  />
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((t, rowIndex) => (
-              <TableRow key={t.key} className="hover:bg-primary/5">
+            {data.map((row, rowIndex) => (
+              <TableRow key={rowIndex} className="hover:bg-primary/5">
                 <TableCell 
                   className="border-r bg-muted/30 cursor-pointer"
                   style={{ width: columnWidths.checkbox }}
                   onClick={() => handleRowSelect(rowIndex, !selectedRows.has(rowIndex))}
                 >
                   <Checkbox 
-                    aria-label={`Select ${t.key}`}
+                    aria-label={`Select row ${rowIndex}`}
                     checked={selectedRows.has(rowIndex)}
                     onCheckedChange={(checked) => handleRowSelect(rowIndex, checked === true)}
                   />
                 </TableCell>
-                <TableCell className="border-r text-center bg-background" style={{ width: columnWidths.type }}>
-                  {editingCell?.row === rowIndex && editingCell?.col === "type" ? (
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                      autoFocus
-                      className="h-7 text-xs"
-                    />
-                  ) : (
-                    <span
-                      className="inline-flex h-5 w-5 items-center justify-center rounded border text-xs cursor-pointer"
-                      onDoubleClick={() => handleDoubleClick(rowIndex, "type", t.type)}
-                    >
-                      {t.type}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell
-                  className="border-r font-medium bg-muted/30 overflow-hidden"
-                  style={{ width: columnWidths.key, maxWidth: columnWidths.key }}
-                >
-                  {editingCell?.row === rowIndex && editingCell?.col === "key" ? (
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                      autoFocus
-                      className="h-7"
-                    />
-                  ) : (
-                    <TruncatedCell 
-                      content={t.key} 
-                      onDoubleClick={() => handleDoubleClick(rowIndex, "key", t.key)}
-                    />
-                  )}
-                </TableCell>
-                <TableCell
-                  className="border-r bg-background overflow-hidden"
-                  style={{ width: columnWidths.summary, maxWidth: columnWidths.summary }}
-                >
-                  {editingCell?.row === rowIndex && editingCell?.col === "summary" ? (
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                      autoFocus
-                      className="h-7"
-                    />
-                  ) : (
-                    <TruncatedCell 
-                      content={t.summary} 
-                      onDoubleClick={() => handleDoubleClick(rowIndex, "summary", t.summary)}
-                    />
-                  )}
-                </TableCell>
-                <TableCell
-                  className="border-r text-muted-foreground bg-muted/30 overflow-hidden"
-                  style={{ width: columnWidths.reporter, maxWidth: columnWidths.reporter }}
-                >
-                  {editingCell?.row === rowIndex && editingCell?.col === "reporter" ? (
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                      autoFocus
-                      className="h-7"
-                    />
-                  ) : (
-                    <TruncatedCell 
-                      content={t.reporter} 
-                      onDoubleClick={() => handleDoubleClick(rowIndex, "reporter", t.reporter)}
-                    />
-                  )}
-                </TableCell>
-                <TableCell 
-                  className="border-r bg-background overflow-hidden" 
-                  style={{ width: columnWidths.assignee, maxWidth: columnWidths.assignee }}
-                >
-                  {t.assignee ? (
-                    <div className="flex items-center gap-2 overflow-hidden min-w-0">
-                      <Avatar className="size-6 flex-shrink-0">
-                        <AvatarFallback className="text-xs">{t.assignee.initials}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <TruncatedCell 
-                          content={t.assignee.name} 
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">Unassigned</span>
-                  )}
-                </TableCell>
-                <TableCell 
-                  className="border-r bg-muted/30 overflow-hidden" 
-                  style={{ width: columnWidths.status, maxWidth: columnWidths.status }}
-                >
-                  <StatusPill status={t.status} />
-                </TableCell>
-                <TableCell
-                  className="border-r bg-background overflow-hidden"
-                  style={{ width: columnWidths.created, maxWidth: columnWidths.created }}
-                >
-                  {editingCell?.row === rowIndex && editingCell?.col === "created" ? (
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                      autoFocus
-                      className="h-7"
-                    />
-                  ) : (
-                    <TruncatedCell 
-                      content={t.created} 
-                      onDoubleClick={() => handleDoubleClick(rowIndex, "created", t.created)}
-                    />
-                  )}
-                </TableCell>
-                <TableCell
-                  className="bg-muted/30 overflow-hidden"
-                  style={{ width: columnWidths.sla, maxWidth: columnWidths.sla }}
-                >
-                  {editingCell?.row === rowIndex && editingCell?.col === "sla" ? (
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleSaveEdit}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                      autoFocus
-                      className="h-7"
-                    />
-                  ) : (
-                    <TruncatedCell 
-                      content={t.sla} 
-                      onDoubleClick={() => handleDoubleClick(rowIndex, "sla", t.sla)}
-                    />
-                  )}
-                </TableCell>
+                {schema.map(col => (
+                  <TableCell
+                    key={col.name}
+                    className="border-r bg-background overflow-hidden"
+                    style={{ width: columnWidths[col.name], maxWidth: columnWidths[col.name] }}
+                  >
+                    {editingCell?.row === rowIndex && editingCell?.col === col.name ? (
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleSaveEdit}
+                        onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                        autoFocus
+                        className="h-7"
+                      />
+                    ) : (
+                      <TruncatedCell 
+                        content={row.data[col.name]} 
+                        onDoubleClick={() => handleDoubleClick(rowIndex, col.name, row.data[col.name])}
+                      />
+                    )}
+                  </TableCell>
+                ))}
               </TableRow>
             ))}
-          </TableBody>
-        </Table>
+          </TableBody></Table>
       </div>
     </div>
   )

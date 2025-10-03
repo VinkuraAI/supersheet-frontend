@@ -8,13 +8,11 @@ import { TicketsTable } from "@/components/service-desk/tickets-table"
 import { RightPanel } from "@/components/service-desk/right-panel"
 import { AiChatWidget } from "@/components/service-desk/ai-chat-widget"
 
-import { WorkspaceProvider } from "@/lib/workspace-context";
-
 import { NoWorkspaceSelected } from "@/components/service-desk/no-workspace-selected";
 import { useWorkspace } from "@/lib/workspace-context";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function ServiceDeskPage() {
+export default function WorkspacePage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
 
@@ -41,18 +39,23 @@ export default function ServiceDeskPage() {
   }, [leftSidebarOpen, rightSidebarOpen])
 
   return (
-    <WorkspaceProvider>
-      <PageContent 
-        leftSidebarOpen={leftSidebarOpen} 
-        rightSidebarOpen={rightSidebarOpen} 
-        setLeftSidebarOpen={setLeftSidebarOpen} 
-        setRightSidebarOpen={setRightSidebarOpen} 
-      />
-    </WorkspaceProvider>
+    <PageContent 
+      leftSidebarOpen={leftSidebarOpen} 
+      rightSidebarOpen={rightSidebarOpen} 
+      setLeftSidebarOpen={setLeftSidebarOpen} 
+      setRightSidebarOpen={setRightSidebarOpen} 
+    />
   )
 }
 
-function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen }: any) {
+interface PageContentProps {
+  leftSidebarOpen: boolean;
+  rightSidebarOpen: boolean;
+  setLeftSidebarOpen: (open: boolean) => void;
+  setRightSidebarOpen: (open: boolean) => void;
+}
+
+function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen }: PageContentProps) {
   const { selectedWorkspace, isLoading } = useWorkspace();
 
   return (
