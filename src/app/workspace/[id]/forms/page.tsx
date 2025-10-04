@@ -20,7 +20,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, FileUp, GripVertical, Check, X, Loader2, Link as LinkIcon, Mail, Phone } from "lucide-react"
+import { Plus, Trash2, FileUp, GripVertical, Check, X, Loader2, Link as LinkIcon, Mail, Phone, CheckCircle } from "lucide-react"
 import { TopBar } from "@/components/service-desk/topbar"
 import { SideNav } from "@/components/service-desk/sidenav"
 import { RightPanel } from "@/components/service-desk/right-panel"

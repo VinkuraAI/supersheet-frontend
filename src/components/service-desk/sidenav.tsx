@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { ChevronDown, Pencil, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ChevronDown, Pencil, Trash2, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import apiClient from "@/utils/api.client"
 import {
@@ -25,6 +26,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useWorkspace } from "@/lib/workspace-context"
 import { Toaster } from "@/components/ui/sonner"
 import { toast } from "sonner"
+import { CreateWorkspaceDialog } from "@/components/dialogs/create-workspace-dialog"
 
 interface Workspace {
   _id: string
@@ -54,11 +56,12 @@ const initialSections = [
     },
     {
         title: "Recommended",
-        items: [{ label: "Create a roadmap" }, { label: "More projects" }],
+        items: [{ label: "Create Workspace", icon: "plus", action: "create-workspace" }],
     },
 ]
 
 export function SideNav() {
+  const router = useRouter();
   const { user } = useAuth();
   const { workspaces, setWorkspaces, selectedWorkspace, setSelectedWorkspace, isLoading } = useWorkspace();
   const [isWorkspacesOpen, setIsWorkspacesOpen] = useState(true)
@@ -67,6 +70,7 @@ export function SideNav() {
   const [showRenameDialog, setShowRenameDialog] = useState(false)
   const [showDiscardDialog, setShowDiscardDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showCreateWorkspaceDialog, setShowCreateWorkspaceDialog] = useState(false)
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -166,18 +170,31 @@ export function SideNav() {
               {section.title}
             </div>
             <ul className="space-y-0.5">
-              {section.items.map((item) => (
+              {section.items.map((item: any) => (
                 <li key={item.label}>
-                  <a
-                    href="#"
-                    className={cn(
-                      "block rounded-md px-2 py-1.5 hover:bg-muted",
-                      item.active ? "bg-muted font-medium" : ""
-                    )}
-                    aria-current={item.active ? "page" : undefined}
-                  >
-                    {item.label}
-                  </a>
+                  {item.action === "create-workspace" ? (
+                    <button
+                      onClick={() => setShowCreateWorkspaceDialog(true)}
+                      className={cn(
+                        "w-full flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted text-left transition-colors",
+                        "hover:bg-blue-50 hover:text-blue-700 font-medium"
+                      )}
+                    >
+                      <Plus className="h-4 w-4" />
+                      {item.label}
+                    </button>
+                  ) : (
+                    <a
+                      href="#"
+                      className={cn(
+                        "block rounded-md px-2 py-1.5 hover:bg-muted",
+                        item.active ? "bg-muted font-medium" : ""
+                      )}
+                      aria-current={item.active ? "page" : undefined}
+                    >
+                      {item.label}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -321,6 +338,12 @@ export function SideNav() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Workspace Dialog */}
+      <CreateWorkspaceDialog 
+        open={showCreateWorkspaceDialog} 
+        onOpenChange={setShowCreateWorkspaceDialog}
+      />
     </>
   )
 }

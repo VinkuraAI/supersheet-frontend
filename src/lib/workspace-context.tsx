@@ -31,6 +31,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const fetchWorkspaces = async () => {
       setIsLoading(true);
       try {
+        // Check if user is authenticated first
+        const storedUser = localStorage.getItem("user");
+        if (!storedUser) {
+          // No user logged in, don't make API calls
+          setIsLoading(false);
+          return;
+        }
+
         const response = await apiClient.get<Workspace[]>("/api/workspaces/");
         setWorkspaces(response.data);
 
@@ -49,8 +57,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             }
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch workspaces:", error);
+        
+        // Handle 401 Unauthorized - user needs to log in
+        if (error.response?.status === 401) {
+          localStorage.removeItem("user");
+          // Optionally redirect to login
+          // router.push('/auth');
+        }
+        
+        // For development, you can set mock data here
+        // setWorkspaces([{
+        //   _id: 'mock-workspace-1',
+        //   name: 'Sample Workspace',
+        //   userId: 'mock-user-1'
+        // }]);
       } finally {
         setIsLoading(false);
       }

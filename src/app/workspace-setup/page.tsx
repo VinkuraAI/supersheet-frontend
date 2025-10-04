@@ -5,10 +5,12 @@ import { motion } from "framer-motion";
 import { Grid3x3, Upload, FileText, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import apiClient from "@/utils/api.client";
+import { useAuth } from "@/lib/auth-context";
 
 function WorkspaceSetup() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<'workspace-name' | 'job-description'>('workspace-name');
   const [workspaceName, setWorkspaceName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -68,16 +70,22 @@ function WorkspaceSetup() {
   };
 
   const handleFinalSubmit = async () => {
+    if (!user) {
+      console.error('No user found. Please log in.');
+      return;
+    }
+
     const workType = searchParams.get('workType');
     const hrOption = searchParams.get('hrOption');
 
     const payload = {
       name: workspaceName,
+      userId: user.id,
       mainFocus: workType,
       primaryHRNeed: hrOption,
       jd: jobDescription,
-      requirements: [], // Sending empty array as per instruction
-      table: {}, // Sending empty object as per instruction
+      requirements: [],
+      table: {},
     };
 
     try {

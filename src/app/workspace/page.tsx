@@ -12,6 +12,13 @@ import { NoWorkspaceSelected } from "@/components/service-desk/no-workspace-sele
 import { useWorkspace } from "@/lib/workspace-context";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const INITIAL_SCHEMA = [
+  { name: "Title", type: "text" },
+  { name: "Status", type: "text" },
+  { name: "Priority", type: "text" },
+  { name: "Assignee", type: "text" },
+];
+
 export default function WorkspacePage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
@@ -57,6 +64,8 @@ interface PageContentProps {
 
 function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen }: PageContentProps) {
   const { selectedWorkspace, isLoading } = useWorkspace();
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [schema, setSchema] = useState<any[]>(INITIAL_SCHEMA);
 
   return (
     <main className="min-h-dvh flex flex-col">
@@ -112,7 +121,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
                 </div>
 
                 <div className="bg-card border rounded-md flex-1 overflow-hidden flex flex-col">
-                  <TicketsTable />
+                  <TicketsTable tickets={tickets} schema={schema} setData={setTickets} />
                 </div>
               </>
             ) : (

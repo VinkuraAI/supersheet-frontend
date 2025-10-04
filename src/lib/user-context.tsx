@@ -24,11 +24,44 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const fetchUser = async () => {
     setIsLoading(true);
     try {
+      // Check if user is authenticated first
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        // No user logged in, don't make API calls
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       const response = await apiClient.get('/api/users/me');
       setUser(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch user data', error);
-      setUser(null);
+      
+      // Handle 401 Unauthorized - clear stored user data
+      if (error.response?.status === 401) {
+        localStorage.removeItem("user");
+        setUser(null);
+      } else {
+        // For other errors, try to use stored user data as fallback
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            // Map auth context user to user context format
+            setUser({
+              fullName: parsedUser.name || parsedUser.fullName || 'User',
+              email: parsedUser.email || '',
+              avatar: null
+            });
+          } catch (parseError) {
+            console.error('Failed to parse stored user data', parseError);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      }
     } finally {
       setIsLoading(false);
     }
