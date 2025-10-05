@@ -608,11 +608,11 @@ export default function HRFormsPage() {
                       <p className="text-muted-foreground text-xs">No AI-extracted data available for this submission.</p>
                     </div>
                   )}
-                  
+                  {/* abe toh sab karunga.. aapke aa gaye hia warna woh fir push hi ni honge ura bhai  */}
                   {selectedSubmission.resumeUrl && (
                      <div className="flex justify-end pt-3">
                         <Button variant="outline" size="sm" className="h-6 px-2 text-xs" asChild>
-                          <a href={`http://localhost:5000/${selectedSubmission.resumeUrl}`} target="_blank" rel="noopener noreferrer">
+                          <a href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/${selectedSubmission.resumeUrl}`} target="_blank" rel="noopener noreferrer">
                             <FileUp className="mr-1.5 h-3 w-3" />
                             View Original Resume
                           </a>
