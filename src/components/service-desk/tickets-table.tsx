@@ -374,22 +374,67 @@ export function TicketsTable({
     setEditValue("");
   };
 
-  const handleStatusChange = (rowIndex: number, newStatus: string) => {
+  const handleStatusChange = async (rowIndex: number, newStatus: string) => {
     if (disabled) return;
-    const newData = tickets.map((item, i) =>
+
+    const oldData = [...currentData];
+    const rowToUpdate = oldData[rowIndex];
+    
+    if (!rowToUpdate) return;
+
+    const rowId = rowToUpdate._id;
+
+    // Create the new data with the updated status
+    const updatedRowData = { ...rowToUpdate.data, Status: newStatus };
+
+    // Optimistically update the UI
+    const newData = currentData.map((item, i) =>
       i === rowIndex
         ? {
             ...item,
-            data: { ...item.data, Status: newStatus },
+            data: updatedRowData,
           }
         : item
     );
-    setData(newData);
-    if (selectedWorkspace) {
-      localStorage.setItem(
-        `workspace-${selectedWorkspace._id}-data`,
-        JSON.stringify(newData)
+    
+    setCurrentData(newData);
+    setData(newData); 
+
+    if (rowToUpdate.isNew) {
+      if (selectedWorkspace) {
+        localStorage.setItem(
+          `workspace-${selectedWorkspace._id}-data`,
+          JSON.stringify(newData)
+        );
+      }
+      return;
+    }
+
+    try {
+      // Send the entire updated row data
+      await apiClient.put(`/api/workspaces/${selectedWorkspace?._id}/rows/${rowId}`, {
+        rowData: updatedRowData,
+      });
+      
+      const updatedInitialData = initialData.current.map(item => 
+        item._id === rowId 
+          ? { ...item, data: updatedRowData } 
+          : item
       );
+      initialData.current = updatedInitialData;
+      
+      if (selectedWorkspace) {
+        localStorage.setItem(
+          `workspace-${selectedWorkspace._id}-data`,
+          JSON.stringify(newData)
+        );
+      }
+
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      setCurrentData(oldData);
+      setData(oldData);
+      alert("Failed to update status. Please try again.");
     }
   };
 
@@ -641,7 +686,7 @@ export function TicketsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tickets.length === 0 ? (
+            {currentData.length === 0 ? (
               <TableRow>
                 <TableCell 
                   colSpan={schema.length + 1} 
@@ -656,7 +701,7 @@ export function TicketsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              tickets.map((row, rowIndex) => (
+              currentData.map((row, rowIndex) => (
                 <TableRow
                   key={row._id || rowIndex}
                   className="hover:bg-primary/5"
