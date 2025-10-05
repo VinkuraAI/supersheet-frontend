@@ -31,6 +31,16 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, RefreshCw, AlertTriangle, X } from "lucide-react";
 import apiClient from "@/utils/api.client";
 import { AddCandidateDialog } from "@/components/dialogs/add-candidate-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Status options with colors
 const STATUS_OPTIONS = [
@@ -70,6 +80,25 @@ function getFeedbackFromScore(score: number): { text: string; color: string } {
   }
 }
 
+function MailConsent({ open, onOpenChange, onSend, onDontSend }: { open: boolean, onOpenChange: (open: boolean) => void, onSend: () => void, onDontSend: () => void }) {
+    return (
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Send Mail?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Do you want to send an email to the candidate?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={onDontSend}>Don't Send</AlertDialogCancel>
+                    <AlertDialogAction onClick={onSend}>Send Mail</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 // Feedback Cell Component
 function FeedbackCell({ aiScore }: { aiScore: number }) {
   const feedback = getFeedbackFromScore(aiScore || 0);
@@ -78,6 +107,56 @@ function FeedbackCell({ aiScore }: { aiScore: number }) {
     <div className={`px-2 py-1 rounded border text-xs font-medium ${feedback.color}`}>
       {feedback.text}
     </div>
+  );
+}
+
+function InformedCell({
+  value,
+  onChange,
+  rowData,
+}: {
+  value: string;
+  onChange: (newValue: string) => void;
+  rowData: any;
+}) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  if (value === 'Informed') {
+    return <Badge variant="secondary">Informed</Badge>;
+  }
+
+  const handleInform = () => {
+    if (!rowData.Name || !rowData.Email) {
+        alert("Please fill in the candidate's Name and Email before sending a mail.");
+        return;
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSendMail = () => {
+    onChange('Informed');
+    setIsDialogOpen(false);
+  };
+
+  return (
+    <>
+      <Select onValueChange={handleInform}>
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue placeholder="Not Informed" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="inform" className="text-xs text-green-600">
+            Informed
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <MailConsent
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSend={handleSendMail}
+        onDontSend={() => setIsDialogOpen(false)}
+      />
+    </>
   );
 }
 
@@ -205,6 +284,7 @@ export function TicketsTable({
   const initialData = useRef<any[]>([]);
   const [isSynced, setIsSynced] = useState(true);
   const [showSyncWarning, setShowSyncWarning] = useState(false);
+  const [mailConsentInfo, setMailConsentInfo] = useState<{ open: boolean, onSend?: () => void, onDontSend?: () => void }>({ open: false });
 
   // Initialize initialData and currentData once when component mounts with the original data
   useEffect(() => {
@@ -303,6 +383,8 @@ export function TicketsTable({
         initialWidths[col.name] = 200; // Wider for feedback text
       } else if (col.name === "Status") {
         initialWidths[col.name] = 120; // Wider for status dropdown
+      } else if (col.name === "Informed") {
+        initialWidths[col.name] = 120; // Wider for informed dropdown
       } else if (col.name === "Notes") {
         initialWidths[col.name] = 150; // Wider for notes
       } else {
@@ -374,9 +456,26 @@ export function TicketsTable({
     setEditValue("");
   };
 
-  const handleStatusChange = (rowIndex: number, newStatus: string) => {
-    if (disabled) return;
-    const newData = tickets.map((item, i) =>
+  const sendMailAndUpdate = (rowIndex: number, newStatus: string) => {
+    const row = currentData[rowIndex];
+    const rowId = row._id;
+    const workspaceId = selectedWorkspace._id;
+
+    const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Informed' };
+
+    apiClient.post(`/api/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {
+        status: newStatus
+    }).then(() => {
+        const newData = [...currentData];
+        newData[rowIndex] = { ...row, data: updatedRowData };
+        setCurrentData(newData);
+        setData(newData);
+        initialData.current = newData; // Mark as synced
+    });
+  }
+
+  const updateStatusOnly = (rowIndex: number, newStatus: string) => {
+    const newData = currentData.map((item, i) =>
       i === rowIndex
         ? {
             ...item,
@@ -384,6 +483,7 @@ export function TicketsTable({
           }
         : item
     );
+    setCurrentData(newData);
     setData(newData);
     if (selectedWorkspace) {
       localStorage.setItem(
@@ -391,6 +491,53 @@ export function TicketsTable({
         JSON.stringify(newData)
       );
     }
+  }
+
+  const handleStatusChange = (rowIndex: number, newStatus: string) => {
+    if (disabled) return;
+    const row = currentData[rowIndex];
+    const oldStatus = row.data.Status;
+
+    if (oldStatus === 'New' && newStatus !== 'New') {
+        if (!row.data.Name || !row.data.Email) {
+            alert("Please fill in the candidate's Name and Email before sending a mail.");
+            return;
+        }
+        setMailConsentInfo({
+            open: true,
+            onSend: () => {
+                sendMailAndUpdate(rowIndex, newStatus);
+                setMailConsentInfo({ open: false });
+            },
+            onDontSend: () => {
+                updateStatusOnly(rowIndex, newStatus);
+                setMailConsentInfo({ open: false });
+            }
+        });
+    } else {
+        updateStatusOnly(rowIndex, newStatus);
+    }
+  };
+
+  const handleInformedChange = (rowIndex: number, newValue: string) => {
+    if (disabled) return;
+    const row = currentData[rowIndex];
+    const rowId = row._id;
+    const workspaceId = selectedWorkspace._id;
+
+    apiClient.post(`/api/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {}).then(() => {
+        const newData = currentData.map((item, i) =>
+          i === rowIndex
+            ? {
+                ...item,
+                data: { ...item.data, Informed: newValue },
+              }
+            : item
+        );
+        setCurrentData(newData);
+        setData(newData);
+        initialData.current = newData;
+    }).catch(err => console.error("Failed to inform candidate", err));
   };
 
   const handleAddRow = () => {
@@ -433,7 +580,7 @@ export function TicketsTable({
       const newColumn = { name: newColumnName, type: "text", isDefault: false };
       // This component doesn't own the schema, it should be passed up.
       // For now, let's update the local filteredSchema state to make it appear.
-      setFilteredSchema([...filteredSchema, newColumn]);
+      // setFilteredSchema([...filteredSchema, newColumn]);
 
       const newData = currentData.map((row) => ({
         ...row,
@@ -515,7 +662,7 @@ export function TicketsTable({
 
   return (
     <div
-      className={`flex flex-col h-full min-w-0 ${
+      className={`flex flex-col h-[100%] min-w-0 ${
         disabled ? "opacity-50 pointer-events-none" : ""
       }`}
     >
@@ -569,7 +716,7 @@ export function TicketsTable({
       </div>
 
       {!isSynced && showSyncWarning && (
-        <div className="fixed top-12 right-3 bg-yellow-100 border-l-3 border-yellow-500 text-yellow-700 p-3 rounded-md shadow-lg z-50">
+        <div className="fixed top-12  right-3 bg-yellow-100 border-l-3 border-yellow-500 text-yellow-700 p-3 rounded-md shadow-lg z-50">
           <div className="flex justify-between items-start">
             <div className="flex">
               <div className="py-0.5">
@@ -589,7 +736,9 @@ export function TicketsTable({
         </div>
       )}
 
-      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+      <MailConsent open={mailConsentInfo.open} onOpenChange={(open) => setMailConsentInfo({ ...mailConsentInfo, open })} onSend={mailConsentInfo.onSend!} onDontSend={mailConsentInfo.onDontSend!} />
+
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col ">
         <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-light">
           <Table 
             style={{ 
@@ -641,7 +790,7 @@ export function TicketsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tickets.length === 0 ? (
+            {currentData.length === 0 ? (
               <TableRow>
                 <TableCell 
                   colSpan={schema.length + 1} 
@@ -656,7 +805,7 @@ export function TicketsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              tickets.map((row, rowIndex) => (
+              currentData.map((row, rowIndex) => (
                 <TableRow
                   key={row._id || rowIndex}
                   className="hover:bg-primary/5"
@@ -696,6 +845,12 @@ export function TicketsTable({
                           value={row.data[col.name] || "New"}
                           onChange={(newStatus) => handleStatusChange(rowIndex, newStatus)}
                           disabled={disabled}
+                        />
+                      ) : col.name === "Informed" ? (
+                        <InformedCell
+                          value={row.data[col.name] || "Not Informed"}
+                          onChange={(newValue) => handleInformedChange(rowIndex, newValue)}
+                          rowData={row.data}
                         />
                       ) : col.name === "Feedback" ? (
                         <FeedbackCell aiScore={row.data["AI Score"] || 0} />

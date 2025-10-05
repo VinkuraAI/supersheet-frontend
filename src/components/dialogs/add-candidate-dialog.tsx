@@ -104,82 +104,47 @@ export function AddCandidateDialog({
 
     setIsUploading(true);
 
+    const formData = new FormData();
+    uploadFiles.forEach(uploadFile => {
+        formData.append("resume", uploadFile.file);
+    });
+
     try {
-      // Upload files one by one
-      for (let i = 0; i < uploadFiles.length; i++) {
-        const uploadFile = uploadFiles[i];
+        setUploadFiles(prev => prev.map(f => ({ ...f, status: 'uploading', progress: 0 })));
 
-        // Update status to uploading
-        setUploadFiles((prev) =>
-          prev.map((f, index) =>
-            index === i ? { ...f, status: "uploading", progress: 0 } : f
-          )
-        );
-
-        try {
-          const formData = new FormData();
-          formData.append("resume", uploadFile.file);
-
-          // Upload resume using the backend endpoint
-          await apiClient.post(
+        await apiClient.post(
             `/api/workspaces/upload-resume/${workspaceId}`,
             formData,
             {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-              onUploadProgress: (progressEvent) => {
-                const progress = progressEvent.total
-                  ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
-                  : 0;
-                setUploadFiles((prev) =>
-                  prev.map((f, index) =>
-                    index === i ? { ...f, progress } : f
-                  )
-                );
-              },
+                headers: { "Content-Type": "multipart/form-data" },
+                onUploadProgress: (progressEvent) => {
+                    const progress = progressEvent.total
+                        ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+                        : 0;
+                    setUploadFiles(prev => prev.map(f => ({ ...f, progress })));
+                },
             }
-          );
+        );
 
-          // Update status to success
-          setUploadFiles((prev) =>
-            prev.map((f, index) =>
-              index === i ? { ...f, status: "success", progress: 100 } : f
-            )
-          );
-        } catch (error: any) {
-          console.error(`Error uploading ${uploadFile.file.name}:`, error);
-          
-          // Update status to error
-          setUploadFiles((prev) =>
-            prev.map((f, index) =>
-              index === i
-                ? {
-                    ...f,
-                    status: "error",
-                    error: error.response?.data?.message || "Upload failed",
-                  }
-                : f
-            )
-          );
-        }
-      }
+        setUploadFiles(prev => prev.map(f => ({ ...f, status: 'success', progress: 100 })));
 
-      // Check if all uploads were successful
-      const allSuccess = uploadFiles.every((f) => f.status === "success");
-
-      if (allSuccess) {
-        // Close dialog and refresh data
         setTimeout(() => {
-          setOpen(false);
-          setUploadFiles([]);
-          if (onCandidatesAdded) {
-            onCandidatesAdded();
-          }
+            setOpen(false);
+            setUploadFiles([]);
+            if (onCandidatesAdded) {
+                onCandidatesAdded();
+            }
         }, 1000);
-      }
+
+    } catch (error: any) {
+        console.error(`Error uploading resumes:`, error);
+        setUploadFiles(prev => prev.map(f => ({
+            ...f,
+            status: 'error',
+            error: error.response?.data?.message || "Upload failed",
+        })));
     } finally {
-      setIsUploading(false);
+        setIsUploading(false);
     }
   };
 
