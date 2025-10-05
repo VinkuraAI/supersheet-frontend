@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, RefreshCw, AlertTriangle, X } from "lucide-react";
 import apiClient from "@/utils/api.client";
 import { AddCandidateDialog } from "@/components/dialogs/add-candidate-dialog";
+import { EmailComposerDialog } from "@/components/dialogs/email-composer-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -285,6 +286,8 @@ export function TicketsTable({
   const [isSynced, setIsSynced] = useState(true);
   const [showSyncWarning, setShowSyncWarning] = useState(false);
   const [mailConsentInfo, setMailConsentInfo] = useState<{ open: boolean, onSend?: () => void, onDontSend?: () => void }>({ open: false });
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [selectedCandidateForEmail, setSelectedCandidateForEmail] = useState<{ name: string; email: string; rowIndex: number; newStatus: string } | null>(null);
 
   // Initialize initialData and currentData once when component mounts with the original data
   useEffect(() => {
@@ -527,17 +530,23 @@ export function TicketsTable({
     const row = currentData[rowIndex];
     const oldStatus = row.data.Status;
 
-    // If status is changing from 'New' to something else, ask about sending email
-    if (oldStatus === 'New' && newStatus !== 'New') {
+    // If status is changing to 'Shortlisted' or 'Hired', ask about sending email
+    if ((newStatus === 'Shortlisted' || newStatus === 'Hired') && oldStatus !== newStatus) {
         if (!row.data.Name || !row.data.Email) {
             alert("Please fill in the candidate's Name and Email before sending a mail.");
             return;
         }
+        setSelectedCandidateForEmail({
+            name: row.data.Name,
+            email: row.data.Email,
+            rowIndex,
+            newStatus
+        });
         setMailConsentInfo({
             open: true,
             onSend: () => {
-                sendMailAndUpdate(rowIndex, newStatus);
                 setMailConsentInfo({ open: false });
+                setEmailComposerOpen(true);
             },
             onDontSend: () => {
                 updateStatusOnly(rowIndex, newStatus);
@@ -552,22 +561,29 @@ export function TicketsTable({
   const handleInformedChange = (rowIndex: number, newValue: string) => {
     if (disabled) return;
     const row = currentData[rowIndex];
-    const rowId = row._id;
-    const workspaceId = selectedWorkspace._id;
 
-    apiClient.post(`/api/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {}).then(() => {
-        const newData = currentData.map((item, i) =>
-          i === rowIndex
-            ? {
-                ...item,
-                data: { ...item.data, Informed: newValue },
-              }
-            : item
-        );
-        setCurrentData(newData);
-        setData(newData);
-        initialData.current = newData;
-    }).catch(err => console.error("Failed to inform candidate", err));
+    // Simply update the Informed status locally without making API call
+    // The email sending is handled by the EmailComposerDialog component
+    const newData = currentData.map((item, i) =>
+      i === rowIndex
+        ? {
+            ...item,
+            data: { ...item.data, Informed: newValue },
+          }
+        : item
+    );
+    
+    setCurrentData(newData);
+    setData(newData);
+    initialData.current = newData;
+    
+    // Save to localStorage
+    if (selectedWorkspace) {
+      localStorage.setItem(
+        `workspace-${selectedWorkspace._id}-data`,
+        JSON.stringify(newData)
+      );
+    }
   };
 
   const handleAddRow = () => {
@@ -767,6 +783,24 @@ export function TicketsTable({
       )}
 
       <MailConsent open={mailConsentInfo.open} onOpenChange={(open) => setMailConsentInfo({ ...mailConsentInfo, open })} onSend={mailConsentInfo.onSend!} onDontSend={mailConsentInfo.onDontSend!} />
+
+      {selectedCandidateForEmail && (
+        <EmailComposerDialog
+          open={emailComposerOpen}
+          onOpenChange={setEmailComposerOpen}
+          candidateData={{
+            name: selectedCandidateForEmail.name,
+            email: selectedCandidateForEmail.email,
+          }}
+          onEmailSent={() => {
+            // Update the status after email is sent successfully
+            if (selectedCandidateForEmail) {
+              updateStatusOnly(selectedCandidateForEmail.rowIndex, selectedCandidateForEmail.newStatus);
+            }
+            setSelectedCandidateForEmail(null);
+          }}
+        />
+      )}
 
       <div className="flex-1 min-w-0 min-h-0 flex flex-col ">
         <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-light">

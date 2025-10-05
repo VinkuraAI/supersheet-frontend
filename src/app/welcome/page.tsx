@@ -145,7 +145,7 @@ const workTypes = [
 const hrOptions = [
   {
     id: 'Hiring',
-    name: "We&apos;re Hiring",
+    name: "We're Hiring",
     icon: HiringIcon,
     bgColor: 'bg-green-50',
     hoverColor: 'hover:bg-green-500',
@@ -178,11 +178,9 @@ export default function WelcomePage() {
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [selectedHrOption, setSelectedHrOption] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      setCurrentStep('selection');
-    }
-  }, [user]);
+  const handleGetStarted = () => {
+    setCurrentStep('selection');
+  };
 
   const handleSkip = () => {
     router.push('/workspace-setup');
@@ -311,7 +309,7 @@ export default function WelcomePage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6, duration: 0.5 }}
-                    className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-4 leading-tight"
+                    className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-3 leading-tight"
                   >
                     Let&apos;s build something amazing together
                   </motion.h2>
@@ -321,7 +319,7 @@ export default function WelcomePage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.7, duration: 0.5 }}
-                    className="text-slate-600 text-lg leading-relaxed mb-8 max-w-xl mx-auto"
+                    className="text-slate-600 text-base leading-relaxed mb-6 max-w-xl mx-auto"
                   >
                     Transform the way you work with powerful tools designed to streamline your workflow, 
                     boost team collaboration, and accelerate productivity. Your journey to better work starts here.
@@ -367,7 +365,7 @@ export default function WelcomePage() {
               className="space-y-4"
             >
               <motion.button
-                onClick={handleSkip}
+                onClick={handleGetStarted}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
                 className="group relative px-12 py-5 rounded-2xl font-bold text-white text-lg
