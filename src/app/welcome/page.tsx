@@ -313,7 +313,7 @@ export default function WelcomePage() {
                     transition={{ delay: 0.6, duration: 0.5 }}
                     className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-4 leading-tight"
                   >
-                    Let's build something amazing together
+                    Let&apos;s build something amazing together
                   </motion.h2>
                   
                   {/* Description */}

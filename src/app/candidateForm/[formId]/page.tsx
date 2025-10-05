@@ -253,8 +253,8 @@ export default function CandidateFormPage() {
                   Thank you for your interest in joining our team.
                 </p>
                 <p className="text-sm text-slate-500">
-                  We've received your application and will review it carefully. 
-                  You'll hear from us soon!
+                  We&apos;ve received your application and will review it carefully. 
+                  You&apos;ll hear from us soon!
                 </p>
               </motion.div>
 

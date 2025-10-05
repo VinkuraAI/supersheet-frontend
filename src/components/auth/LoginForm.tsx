@@ -50,8 +50,9 @@ export default function LoginForm() {
       await login(formData.email, formData.password);
       // Redirect to welcome page after successful login
       router.push('/welcome');
-    } catch (error: any) {
-      setErrors({ general: error.message || "Something went wrong" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Something went wrong";
+      setErrors({ general: message });
     }
   };
 

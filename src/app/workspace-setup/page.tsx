@@ -184,7 +184,7 @@ function WorkspaceSetup() {
             <div className="text-center space-y-3">
               {/* Primary Heading: Gradient text from #1E293B to #334155 */}
               <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                What's your workspace name?
+                What&apos;s your workspace name?
               </h2>
               {/* Subtitle: Medium gray #64748B */}
               <p className="text-slate-600 text-base sm:text-lg max-w-xl mx-auto">
@@ -231,7 +231,7 @@ function WorkspaceSetup() {
                   
                   {/* Helper Text: Light gray #64748B */}
                   <p className="mt-2 text-sm text-slate-500">
-                    Choose a descriptive name that reflects your team's purpose
+                    Choose a descriptive name that reflects your team&apos;s purpose
                   </p>
                 </div>
 
@@ -307,7 +307,7 @@ function WorkspaceSetup() {
               <ul className="space-y-2 text-sm text-blue-800">
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 mt-0.5">•</span>
-                  <span>Use a clear, descriptive name (e.g., "Engineering Hiring 2025")</span>
+                  <span>Use a clear, descriptive name (e.g., &quot;Engineering Hiring 2025&quot;)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 mt-0.5">•</span>

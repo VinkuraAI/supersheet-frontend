@@ -417,7 +417,7 @@ export function SideNav() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Workspace?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete the workspace named "{workspaceToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to permanently delete the workspace named &quot;{workspaceToDelete?.name}&quot;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

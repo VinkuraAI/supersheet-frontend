@@ -91,7 +91,7 @@ function MailConsent({ open, onOpenChange, onSend, onDontSend }: { open: boolean
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={onDontSend}>Don't Send</AlertDialogCancel>
+                    <AlertDialogCancel onClick={onDontSend}>Don&apos;t Send</AlertDialogCancel>
                     <AlertDialogAction onClick={onSend}>Send Mail</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -829,7 +829,7 @@ export function TicketsTable({
                   <div className="flex flex-col items-center justify-center">
                     <p className="text-sm text-muted-foreground">There are no candidates in this workspace yet.</p>
                     <p className="mt-1.5 text-xs text-muted-foreground">
-                      Click "Add Row" to add candidates manually or approve them from the workspace form.
+                      Click &quot;Add Row&quot; to add candidates manually or approve them from the workspace form.
                     </p>
                   </div>
                 </TableCell>
