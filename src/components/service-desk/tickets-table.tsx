@@ -456,20 +456,51 @@ export function TicketsTable({
     setEditValue("");
   };
 
-  const handleStatusChange = async (rowIndex: number, newStatus: string) => {
+  // Helper function to update status and send email
+  const sendMailAndUpdate = async (rowIndex: number, newStatus: string) => {
     if (disabled) return;
-
-    const oldData = [...currentData];
-    const rowToUpdate = oldData[rowIndex];
     
-    if (!rowToUpdate) return;
+    const row = currentData[rowIndex];
+    const rowId = row._id;
+    const workspaceId = selectedWorkspace._id;
 
-    const rowId = rowToUpdate._id;
+    try {
+      // Send email first
+      await apiClient.post(`/api/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {});
+      
+      // Then update status
+      const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Yes' };
+      const newData = currentData.map((item, i) =>
+        i === rowIndex
+          ? {
+              ...item,
+              data: updatedRowData,
+            }
+          : item
+      );
+      
+      setCurrentData(newData);
+      setData(newData);
+      initialData.current = newData;
+      
+      if (selectedWorkspace) {
+        localStorage.setItem(
+          `workspace-${selectedWorkspace._id}-data`,
+          JSON.stringify(newData)
+        );
+      }
+    } catch (err) {
+      console.error("Failed to send mail and update status", err);
+    }
+  };
 
-    // Create the new data with the updated status
-    const updatedRowData = { ...rowToUpdate.data, Status: newStatus };
-
-    // Optimistically update the UI
+  // Helper function to update status only without sending email
+  const updateStatusOnly = (rowIndex: number, newStatus: string) => {
+    if (disabled) return;
+    
+    const row = currentData[rowIndex];
+    const updatedRowData = { ...row.data, Status: newStatus };
+    
     const newData = currentData.map((item, i) =>
       i === rowIndex
         ? {
@@ -478,20 +509,25 @@ export function TicketsTable({
           }
         : item
     );
+    
+    setCurrentData(newData);
     setData(newData);
+    initialData.current = newData;
+    
     if (selectedWorkspace) {
       localStorage.setItem(
         `workspace-${selectedWorkspace._id}-data`,
         JSON.stringify(newData)
       );
     }
-  }
+  };
 
   const handleStatusChange = (rowIndex: number, newStatus: string) => {
     if (disabled) return;
     const row = currentData[rowIndex];
     const oldStatus = row.data.Status;
 
+    // If status is changing from 'New' to something else, ask about sending email
     if (oldStatus === 'New' && newStatus !== 'New') {
         if (!row.data.Name || !row.data.Email) {
             alert("Please fill in the candidate's Name and Email before sending a mail.");
