@@ -96,6 +96,26 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
         index === self.findIndex((c: any) => c.name === col.name)
       );
       
+      // Add Informed column if it doesn't exist
+      if (!uniqueSchema.find((col: any) => col.name === "Informed")) {
+        const statusIndex = uniqueSchema.findIndex((col: any) => col.name === "Status");
+        uniqueSchema.splice(statusIndex + 1, 0, {
+          name: "Informed",
+          type: "text",
+          isDefault: true
+        });
+      }
+
+      // Add Source column if it doesn't exist
+      if (!uniqueSchema.find((col: any) => col.name === "Source")) {
+        const informedIndex = uniqueSchema.findIndex((col: any) => col.name === "Informed");
+        uniqueSchema.splice(informedIndex + 1, 0, {
+          name: "Source",
+          type: "text",
+          isDefault: true,
+        });
+      }
+
       // Add Feedback column if it doesn't exist (appears after Notes column)
       if (!uniqueSchema.find((col: any) => col.name === "Feedback")) {
         uniqueSchema.push({
@@ -184,7 +204,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
                   </div>
                 </div>
 
-                <div className="bg-card border rounded-md flex-1 min-h-0 flex flex-col">
+                <div className="bg-card border rounded-md flex-1 min-h-0 flex flex-col h-full">
                   <TicketsTable 
                     tickets={rows} 
                     schema={schema} 
