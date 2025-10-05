@@ -9,8 +9,8 @@ import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 export default function LoginForm() {
   const { login, isLoading } = useAuth();
   const [formData, setFormData] = useState({
-    email: "user123",
-    password: "user123",
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -102,13 +102,6 @@ export default function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Demo Credentials Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-          <p className="text-blue-800 font-medium">Demo Credentials:</p>
-          <p className="text-blue-600">Email: <code className="bg-blue-100 px-1 rounded">user123</code></p>
-          <p className="text-blue-600">Password: <code className="bg-blue-100 px-1 rounded">user123</code></p>
-        </div>
-
         {/* Error Message */}
         {errors.general && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">

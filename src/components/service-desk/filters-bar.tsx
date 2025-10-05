@@ -31,11 +31,11 @@ function FilterButton({
         <Button
           variant="outline"
           size="sm"
-          className="justify-between gap-2 bg-transparent flex-shrink-0 whitespace-nowrap"
+          className="justify-between gap-1.5 bg-transparent flex-shrink-0 whitespace-nowrap h-7 px-2 text-xs"
           disabled={disabled}
         >
           <span className="truncate">{label}</span>
-          <ChevronDown className="size-4 flex-shrink-0" />
+          <ChevronDown className="size-3 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
@@ -65,15 +65,15 @@ export function FiltersBar() {
   const disabled = !selectedWorkspace;
 
   return (
-    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-      <div className="flex items-center gap-2 overflow-x-auto flex-nowrap pb-2 md:pb-0 scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
-        <Input placeholder="Search work" className="h-9 w-[220px] flex-shrink-0" aria-label="Search work" disabled={disabled} />
+    <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
+      <div className="flex items-center gap-1.5 overflow-x-auto flex-nowrap pb-1.5 md:pb-0 scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent">
+        <Input placeholder="Search work" className="h-7 w-[165px] flex-shrink-0 text-xs" aria-label="Search work" disabled={disabled} />
         <FilterButton label="Request type" items={["Incident", "Task", "Question"]} disabled={disabled} />
         <FilterButton label="Status" items={["Waiting for support", "In progress", "Done"]} disabled={disabled} />
         <FilterButton label="Assignee" items={["Unassigned", "Me", "Team"]} disabled={disabled} />
         <FilterButton label="More filters" items={["Created date", "Reporter", "SLA"]} disabled={disabled} />
       </div>
-      <div className="text-xs text-muted-foreground px-1 flex-shrink-0">{disabled ? "-" : "5 work items"}</div>
+      <div className="text-[0.65rem] text-muted-foreground px-1 flex-shrink-0">{disabled ? "-" : "5 work items"}</div>
     </div>
   )
 }

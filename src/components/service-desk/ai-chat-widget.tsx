@@ -104,8 +104,8 @@ export function AiChatWidget() {
           opacity: 1, 
           y: 0,
         }}
-        className={`fixed left-1/2  -translate-x-1/2 z-50 w-full max-w-4xl px-4 ${
-          isExpanded ? "top-[10vh] h-[70vh] bottom-6" : "bottom-6"
+        className={`fixed left-1/2  -translate-x-1/2 z-50 w-full max-w-3xl px-3 ${
+          isExpanded ? "top-[10vh] h-[70vh] bottom-4" : "bottom-4"
         }`}
       >
         <motion.div
@@ -134,14 +134,14 @@ export function AiChatWidget() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { delay: 0.2, duration: 0.3 } }}
                 exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent"
+                className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-primary scrollbar-track-transparent"
               >
                 {messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                    <div className="text-center space-y-2">
-                      <Sparkles className="size-8 mx-auto text-primary/50" />
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                    <div className="text-center space-y-1.5">
+                      <Sparkles className="size-6 mx-auto text-primary/50" />
                       <p>Start a conversation with AI</p>
-                      <p className="text-xs">Ask me anything about your service desk...</p>
+                      <p className="text-[0.65rem]">Ask me anything about your service desk...</p>
                     </div>
                   </div>
                 ) : (
@@ -154,7 +154,7 @@ export function AiChatWidget() {
                         className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                       >
                         <div
-                          className={`max-w-[75%] rounded-2xl px-5 py-3 ${
+                          className={`max-w-[75%] rounded-xl px-3 py-2 text-xs ${
                             msg.role === "user"
                               ? "bg-primary text-primary-foreground shadow-lg"
                               : "bg-muted text-foreground shadow-md"
@@ -176,11 +176,11 @@ export function AiChatWidget() {
                         animate={{ opacity: 1, y: 0 }}
                         className="flex justify-start"
                       >
-                        <div className="max-w-[75%] rounded-2xl px-5 py-3 bg-muted text-foreground shadow-md">
-                          <div className="flex items-center space-x-2">
-                            <span className="h-2 w-2 bg-primary rounded-full animate-pulse"></span>
-                            <span className="h-2 w-2 bg-primary rounded-full animate-pulse delay-150"></span>
-                            <span className="h-2 w-2 bg-primary rounded-full animate-pulse delay-300"></span>
+                        <div className="max-w-[75%] rounded-xl px-3 py-2 bg-muted text-foreground shadow-md">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse"></span>
+                            <span className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse delay-150"></span>
+                            <span className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse delay-300"></span>
                           </div>
                         </div>
                       </motion.div>
@@ -199,8 +199,8 @@ export function AiChatWidget() {
                 e.preventDefault()
                 handleSend()
               }}
-              className={`flex items-center gap-3 ${
-                isExpanded ? "px-6 py-5" : "px-6 py-5"
+              className={`flex items-center gap-2 ${
+                isExpanded ? "px-4 py-3" : "px-4 py-3"
               }`}
             >
               {/* AI Icon */}
@@ -209,7 +209,7 @@ export function AiChatWidget() {
                   isExpanded ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <Sparkles className="size-6" />
+                <Sparkles className="size-5" />
               </div>
 
               {/* Input field - seamlessly blended */}
@@ -219,12 +219,12 @@ export function AiChatWidget() {
                 onChange={(e) => setMessage(e.target.value)}
                 onFocus={() => setIsExpanded(true)}
                 placeholder={selectedWorkspace ? "Ask AI anything..." : "Please select a workspace first"}
-                className="flex-1 bg-transparent border-0 outline-none focus:outline-none text-base placeholder:text-muted-foreground/70 text-foreground"
+                className="flex-1 bg-transparent border-0 outline-none focus:outline-none text-xs placeholder:text-muted-foreground/70 text-foreground"
                 disabled={!selectedWorkspace || isLoading}
               />
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div
@@ -240,9 +240,9 @@ export function AiChatWidget() {
                           setIsExpanded(false)
                           setMessage("")
                         }}
-                        className="size-10 rounded-full hover:bg-muted"
+                        className="size-7 rounded-full hover:bg-muted"
                       >
-                        <X className="size-5" />
+                        <X className="size-4" />
                       </Button>
                     </motion.div>
                   )}
@@ -252,13 +252,13 @@ export function AiChatWidget() {
                   type="submit"
                   size="icon"
                   disabled={!message.trim() || isLoading}
-                  className={`size-10 rounded-full transition-all duration-300 ${
+                  className={`size-7 rounded-full transition-all duration-300 ${
                     message.trim()
                       ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  <Send className="size-5" />
+                  <Send className="size-4" />
                 </Button>
               </div>
             </form>
@@ -271,7 +271,7 @@ export function AiChatWidget() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute -top-10 left-1/2 -translate-x-1/2 text-sm text-muted-foreground whitespace-nowrap bg-card/80 backdrop-blur-sm px-3 py-1 rounded-full border border-border"
+                className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap bg-card/80 backdrop-blur-sm px-2 py-0.5 rounded-full border border-border"
               >
                 Click to start chatting with AI
               </motion.div>

@@ -8,14 +8,14 @@ export function RightPanel() {
   const [checks, setChecks] = useState([true, false, false, false, false])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Demo service project</CardTitle>
+        <CardHeader className="p-3">
+          <CardTitle className="text-xs">Demo service project</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-xs text-muted-foreground">Demo basics</div>
-          <ol className="space-y-2 text-sm">
+        <CardContent className="space-y-2 p-3">
+          <div className="text-[0.65rem] text-muted-foreground">Demo basics</div>
+          <ol className="space-y-1.5 text-xs">
             {[
               "Pick up your first request",
               "Reply to an example customer",
@@ -23,14 +23,14 @@ export function RightPanel() {
               "Pretend to be a customer",
               "Invite your team to explore",
             ].map((label, idx) => (
-              <li key={label} className="flex items-start gap-2">
+              <li key={label} className="flex items-start gap-1.5">
                 <Checkbox
                   id={`step-${idx}`}
                   checked={checks[idx]}
                   onCheckedChange={(v) => setChecks((prev) => prev.map((c, i) => (i === idx ? !!v : c)))}
-                  className="mt-0.5"
+                  className="mt-0 h-3 w-3"
                 />
-                <label htmlFor={`step-${idx}`} className="cursor-pointer leading-6">
+                <label htmlFor={`step-${idx}`} className="cursor-pointer leading-5">
                   {label}
                 </label>
               </li>
@@ -40,22 +40,22 @@ export function RightPanel() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Reference design</CardTitle>
+        <CardHeader className="p-3">
+          <CardTitle className="text-xs">Reference design</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3">
           <figure className="rounded-md overflow-hidden border">
             <img
               src="/images/ui-to-build.jpeg"
               alt="Reference screenshot of the target Jira-like service desk UI"
               className="w-full h-auto"
             />
-            <figcaption className="p-2 text-xs text-muted-foreground">This preview is for reference only.</figcaption>
+            <figcaption className="p-1.5 text-[0.65rem] text-muted-foreground">This preview is for reference only.</figcaption>
           </figure>
         </CardContent>
       </Card>
 
-      <div className="text-xs text-muted-foreground">
+      <div className="text-[0.65rem] text-muted-foreground">
         <a href="#" className="underline hover:text-foreground">
           Remove demo activities
         </a>

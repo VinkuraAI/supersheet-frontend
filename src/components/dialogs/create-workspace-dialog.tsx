@@ -155,8 +155,8 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-2xl font-bold">
             {step === 'name' ? 'Create New Workspace' : 'Add Job Description'}
           </DialogTitle>
@@ -168,7 +168,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
         </DialogHeader>
 
         {step === 'name' ? (
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-4 flex-shrink-0">
             <div className="space-y-3">
               <Label htmlFor="workspace-name" className="text-sm font-semibold">
                 Workspace Name <span className="text-red-500">*</span>
@@ -192,7 +192,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             </div>
           </div>
         ) : (
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-4 overflow-y-auto flex-1 min-h-0 scrollbar-hide">
             <div className="space-y-3">
               <Label className="text-sm font-semibold">
                 Job Description <span className="text-red-500">*</span>
@@ -247,13 +247,13 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
                 placeholder="Paste your job description here..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                className="min-h-[200px] text-sm"
+                className="min-h-[200px] max-h-[400px] text-sm resize-none"
               />
             </div>
           </div>
         )}
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 flex-shrink-0 border-t pt-4 mt-4">
           {step === 'description' && (
             <Button variant="outline" onClick={handleBack}>
               Back

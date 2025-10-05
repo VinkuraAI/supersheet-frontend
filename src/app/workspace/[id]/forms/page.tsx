@@ -255,24 +255,24 @@ export default function HRFormsPage() {
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
         )
     }
 
     if (formCreationSuccess) {
         return (
-            <div className="min-h-screen bg-background p-8 flex items-center justify-center">
-                <div className="text-center max-w-2xl">
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <h1 className="text-3xl font-bold mb-2">Form Created Successfully!</h1>
-                    <p className="text-muted-foreground mb-6">Your form is now live and ready to be shared with candidates.</p>
-                    <div className="bg-gray-100 rounded-lg p-4 flex items-center gap-4">
-                        <LinkIcon className="h-5 w-5 text-gray-500" />
-                        <input type="text" readOnly value={getShareableLink()} className="bg-transparent outline-none w-full text-gray-800" />
-                        <Button onClick={() => navigator.clipboard.writeText(getShareableLink())}>Copy Link</Button>
+            <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+                <div className="text-center max-w-xl">
+                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                    <h1 className="text-2xl font-bold mb-1.5">Form Created Successfully!</h1>
+                    <p className="text-muted-foreground mb-4 text-xs">Your form is now live and ready to be shared with candidates.</p>
+                    <div className="bg-gray-100 rounded-lg p-3 flex items-center gap-3">
+                        <LinkIcon className="h-4 w-4 text-gray-500" />
+                        <input type="text" readOnly value={getShareableLink()} className="bg-transparent outline-none w-full text-gray-800 text-xs" />
+                        <Button onClick={() => navigator.clipboard.writeText(getShareableLink())} className="h-7 px-2 text-xs">Copy Link</Button>
                     </div>
-                     <Button variant="outline" className="mt-8" onClick={() => setFormCreationSuccess(false)}>View Submissions</Button>
+                     <Button variant="outline" className="mt-6 h-7 px-2 text-xs" onClick={() => setFormCreationSuccess(false)}>View Submissions</Button>
                 </div>
             </div>
         )
@@ -280,19 +280,19 @@ export default function HRFormsPage() {
 
     if (!formExists) {
       return (
-        <div className="min-h-screen bg-background p-8">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-6">
-              <Button onClick={handleCreateForm} className="bg-primary hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
+        <div className="min-h-screen bg-background p-6">
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-4">
+              <Button onClick={handleCreateForm} className="bg-primary hover:bg-primary/90 h-7 px-2 text-xs">
+                <Plus className="mr-1.5 h-3 w-3" />
                 Create Form
               </Button>
             </div>
             <Card className="border-2 border-dashed">
-              <CardContent className="flex min-h-[400px] items-center justify-center">
+              <CardContent className="flex min-h-[300px] items-center justify-center">
                 <div className="text-center">
-                  <p className="text-lg text-muted-foreground">You haven&apos;t created a form for this workspace yet.</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">You haven&apos;t created a form for this workspace yet.</p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     Click the &quot;Create Form&quot; button above to get started.
                   </p>
                 </div>
@@ -305,34 +305,34 @@ export default function HRFormsPage() {
 
     if (isBuilding) {
       return (
-        <div className="min-h-screen bg-background p-8">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-6 flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Build Your Job Application Form</h1>
-              <Button onClick={handleConfirmForm} className="bg-primary hover:bg-primary/90">
+        <div className="min-h-screen bg-background p-6">
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h1 className="text-lg font-bold">Build Your Job Application Form</h1>
+              <Button onClick={handleConfirmForm} className="bg-primary hover:bg-primary/90 h-7 px-2 text-xs">
                 Confirm Form
               </Button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
+                <CardContent className="pt-4">
+                  <div className="space-y-3">
                     <div>
-                      <Label className="text-xs text-muted-foreground">Form Title</Label>
+                      <Label className="text-[0.65rem] text-muted-foreground">Form Title</Label>
                       <Input
                         value={formTitle}
                         onChange={(e) => setFormTitle(e.target.value)}
-                        className="mt-1 font-medium text-lg"
+                        className="mt-0.5 font-medium text-sm"
                         placeholder="Enter form title"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Form Description</Label>
+                      <Label className="text-[0.65rem] text-muted-foreground">Form Description</Label>
                       <Input
                         value={formDescription}
                         onChange={(e) => setFormDescription(e.target.value)}
-                        className="mt-1"
+                        className="mt-0.5 text-xs"
                         placeholder="Enter form description"
                       />
                     </div>
@@ -342,27 +342,27 @@ export default function HRFormsPage() {
 
               {fields.map((field) => (
                 <Card key={field.id} className="relative">
-                  <CardContent className="pt-6">
-                    <div className="mb-4 flex items-start gap-4">
-                      <GripVertical className="mt-2 h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1 space-y-4">
+                  <CardContent className="pt-4">
+                    <div className="mb-3 flex items-start gap-3">
+                      <GripVertical className="mt-1.5 h-4 w-4 text-muted-foreground" />
+                      <div className="flex-1 space-y-3">
                         <div>
-                          <Label className="text-xs text-muted-foreground">Question</Label>
+                          <Label className="text-[0.65rem] text-muted-foreground">Question</Label>
                           <Input
                             value={field.question}
                             onChange={(e) => handleUpdateField(field.id, { question: e.target.value })}
-                            className="mt-1 font-medium"
+                            className="mt-0.5 font-medium text-xs"
                             placeholder="Enter your question"
                           />
                         </div>
 
                         {field.type === "text" && (
                           <div>
-                            <Label className="text-xs text-muted-foreground">Placeholder</Label>
+                            <Label className="text-[0.65rem] text-muted-foreground">Placeholder</Label>
                             <Input
                               value={field.placeholder || ""}
                               onChange={(e) => handleUpdateField(field.id, { placeholder: e.target.value })}
-                              className="mt-1"
+                              className="mt-0.5 text-xs"
                               placeholder="Enter placeholder text"
                             />
                           </div>
@@ -370,23 +370,24 @@ export default function HRFormsPage() {
 
                         {field.type === "multiple-choice" && (
                           <div>
-                            <Label className="text-xs text-muted-foreground">Options</Label>
-                            <RadioGroup className="mt-2 space-y-2">
+                            <Label className="text-[0.65rem] text-muted-foreground">Options</Label>
+                            <RadioGroup className="mt-1.5 space-y-1.5">
                               {field.options?.map((option, optionIndex) => (
-                                <div key={optionIndex} className="flex items-center gap-2">
-                                  <RadioGroupItem value={option} disabled />
+                                <div key={optionIndex} className="flex items-center gap-1.5">
+                                  <RadioGroupItem value={option} disabled className="h-3 w-3" />
                                   <Input
                                     value={option}
                                     onChange={(e) => handleUpdateOption(field.id, optionIndex, e.target.value)}
-                                    className="flex-1"
+                                    className="flex-1 text-xs h-7"
                                   />
                                   {field.options && field.options.length > 1 && (
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => handleDeleteOption(field.id, optionIndex)}
+                                      className="h-7 w-7"
                                     >
-                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                      <Trash2 className="h-3 w-3 text-destructive" />
                                     </Button>
                                   )}
                                 </div>
@@ -396,9 +397,9 @@ export default function HRFormsPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleAddOption(field.id)}
-                              className="mt-2"
+                              className="mt-1.5 h-7 px-2 text-xs"
                             >
-                              <Plus className="mr-2 h-4 w-4" />
+                              <Plus className="mr-1.5 h-3 w-3" />
                               Add Option
                             </Button>
                           </div>
@@ -408,9 +409,9 @@ export default function HRFormsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDeleteField(field.id)}
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive h-7 w-7"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </CardContent>
@@ -418,12 +419,12 @@ export default function HRFormsPage() {
               ))}
 
               <Card className="border-primary/50 bg-primary/5">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-4">
-                    <FileUp className="mt-2 h-5 w-5 text-primary" />
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <FileUp className="mt-1.5 h-4 w-4 text-primary" />
                     <div className="flex-1">
-                      <Label className="font-medium">Resume Upload (Required)</Label>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <Label className="font-medium text-xs">Resume Upload (Required)</Label>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         This field is mandatory and cannot be removed. Candidates will upload their resume here.
                       </p>
                     </div>
@@ -432,13 +433,13 @@ export default function HRFormsPage() {
                 </CardContent>
               </Card>
 
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleAddField("text")} className="flex-1">
-                  <Plus className="mr-2 h-4 w-4" />
+              <div className="flex gap-1.5">
+                <Button variant="outline" onClick={() => handleAddField("text")} className="flex-1 h-7 px-2 text-xs">
+                  <Plus className="mr-1.5 h-3 w-3" />
                   Add Text Field
                 </Button>
-                <Button variant="outline" onClick={() => handleAddField("multiple-choice")} className="flex-1">
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button variant="outline" onClick={() => handleAddField("multiple-choice")} className="flex-1 h-7 px-2 text-xs">
+                  <Plus className="mr-1.5 h-3 w-3" />
                   Add Multiple Choice
                 </Button>
               </div>
@@ -464,14 +465,14 @@ export default function HRFormsPage() {
     }
 
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-6 flex items-center justify-between">
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">{formTitle}</h1>
-              <p className="text-sm text-muted-foreground">{formDescription}</p>
+              <h1 className="text-lg font-bold">{formTitle}</h1>
+              <p className="text-xs text-muted-foreground">{formDescription}</p>
             </div>
-            <Button variant="outline" onClick={() => {
+            <Button variant="outline" className="h-7 px-2 text-xs" onClick={() => {
               const link = getShareableLink();
               if (link) {
                 navigator.clipboard.writeText(link);
@@ -480,33 +481,33 @@ export default function HRFormsPage() {
               }
             }}>
               {isCopied ? (
-                <><Check className="mr-2 h-4 w-4" />Copied!</>
+                <><Check className="mr-1.5 h-3 w-3" />Copied!</>
               ) : (
-                <><LinkIcon className="mr-2 h-4 w-4" />Copy Link</>
+                <><LinkIcon className="mr-1.5 h-3 w-3" />Copy Link</>
               )}
             </Button>
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Candidate Submissions</CardTitle>
-              <CardDescription>Click on a submission to view details</CardDescription>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm">Candidate Submissions</CardTitle>
+              <CardDescription className="text-xs">Click on a submission to view details</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
                 {submissions.length > 0 ? (
                     <Table>
                         <TableHeader>
                         <TableRow>
-                            <TableHead>Candidate</TableHead>
-                            <TableHead>Submitted At</TableHead>
-                            <TableHead>Actions</TableHead>
+                            <TableHead className="text-xs">Candidate</TableHead>
+                            <TableHead className="text-xs">Submitted At</TableHead>
+                            <TableHead className="text-xs">Actions</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
                         {submissions.map((submission) => (
                             <TableRow
                             key={submission._id}
-                            className="cursor-pointer hover:bg-muted/50"
+                            className="cursor-pointer hover:bg-muted/50 text-xs"
                             onClick={() => setSelectedSubmission(submission)}
                             >
                             <TableCell className="font-medium">
@@ -517,6 +518,7 @@ export default function HRFormsPage() {
                                 <Button
                                 variant="outline"
                                 size="sm"
+                                className="h-6 px-2 text-xs"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     setSelectedSubmission(submission)
@@ -530,95 +532,95 @@ export default function HRFormsPage() {
                         </TableBody>
                     </Table>
                 ) : (
-                    <div className="text-center py-16">
-                        <p className="text-lg text-muted-foreground">No submissions yet.</p>
-                        <p className="mt-2 text-sm text-muted-foreground">Share the form link to start receiving applications.</p>
+                    <div className="text-center py-12">
+                        <p className="text-sm text-muted-foreground">No submissions yet.</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground">Share the form link to start receiving applications.</p>
                     </div>
                 )}
             </CardContent>
           </Card>
 
           <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Submission Details</DialogTitle>
-                <DialogDescription>Review the candidate&apos;s application</DialogDescription>
+                <DialogTitle className="text-sm">Submission Details</DialogTitle>
+                <DialogDescription className="text-xs">Review the candidate&apos;s application</DialogDescription>
               </DialogHeader>
               {selectedSubmission && (
-                <div className="space-y-6 pt-4">
+                <div className="space-y-4 pt-3">
                   {selectedSubmission.extractedData ? (
                     <>
                       <div>
-                        <h2 className="text-2xl font-bold text-primary">{selectedSubmission.extractedData.Name}</h2>
-                        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-2">
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="h-4 w-4" />
+                        <h2 className="text-lg font-bold text-primary">{selectedSubmission.extractedData.Name}</h2>
+                        <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1.5">
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
                             <a href={`mailto:${selectedSubmission.extractedData.Email}`} className="hover:underline">{selectedSubmission.extractedData.Email}</a>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="h-4 w-4" />
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
                             <span>{selectedSubmission.extractedData.Phone}</span>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <h3 className="font-semibold mb-3">Skills</h3>
-                        <div className="flex flex-wrap gap-2">
+                        <h3 className="font-semibold mb-2 text-xs">Skills</h3>
+                        <div className="flex flex-wrap gap-1.5">
                           {selectedSubmission.extractedData.Skills.split(',').map((skill) => (
-                            <Badge key={skill.trim()} variant="secondary" className="font-normal">{skill.trim()}</Badge>
+                            <Badge key={skill.trim()} variant="secondary" className="font-normal text-[0.65rem]"> {skill.trim()}</Badge>
                           ))}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1.5">
                         <div>
-                          <h3 className="font-semibold mb-2">Experience</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <h3 className="font-semibold mb-1.5 text-xs">Experience</h3>
+                          <p className="text-xs text-muted-foreground">
                             {formatExperience(selectedSubmission.extractedData.Experience)}
                           </p>
                         </div>
                         <div>
-                          <h3 className="font-semibold mb-2">Education</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <h3 className="font-semibold mb-1.5 text-xs">Education</h3>
+                          <p className="text-xs text-muted-foreground">
                             {selectedSubmission.extractedData.Education}
                           </p>
                         </div>
                       </div>
 
-                      <details className="pt-2">
-                        <summary className="cursor-pointer text-sm font-medium">View Original Form Answers</summary>
-                        <div className="space-y-4 mt-4">
+                      <details className="pt-1.5">
+                        <summary className="cursor-pointer text-xs font-medium">View Original Form Answers</summary>
+                        <div className="space-y-3 mt-3">
                           {Object.entries(selectedSubmission.candidateData).map(([fieldId, answer]) => (
-                            <div key={fieldId} className="rounded-lg border bg-muted/50 p-3">
-                              <p className="text-sm font-medium text-muted-foreground">
+                            <div key={fieldId} className="rounded-lg border bg-muted/50 p-2">
+                              <p className="text-xs font-medium text-muted-foreground">
                                 {fields.find((f) => f.id === fieldId)?.question || "Question"}
                               </p>
-                              <p className="mt-1">{answer as string}</p>
+                              <p className="mt-0.5 text-xs">{answer as string}</p>
                             </div>
                           ))}
                         </div>
                       </details>
                     </>
                   ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">No AI-extracted data available for this submission.</p>
+                    <div className="text-center py-6">
+                      <p className="text-muted-foreground text-xs">No AI-extracted data available for this submission.</p>
                     </div>
                   )}
                   
                   {selectedSubmission.resumeUrl && (
-                     <div className="flex justify-end pt-4">
-                        <Button variant="outline" size="sm" asChild>
+                     <div className="flex justify-end pt-3">
+                        <Button variant="outline" size="sm" className="h-6 px-2 text-xs" asChild>
                           <a href={`http://localhost:5000/${selectedSubmission.resumeUrl}`} target="_blank" rel="noopener noreferrer">
-                            <FileUp className="mr-2 h-4 w-4" />
+                            <FileUp className="mr-1.5 h-3 w-3" />
                             View Original Resume
                           </a>
                         </Button>
                       </div>
                   )}
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => handleDeny(selectedSubmission._id)}>Deny</Button>
-                    <Button onClick={() => handleApprove(selectedSubmission._id)}>Approve</Button>
+                    <Button variant="outline" className="h-7 px-2 text-xs" onClick={() => handleDeny(selectedSubmission._id)}>Deny</Button>
+                    <Button className="h-7 px-2 text-xs" onClick={() => handleApprove(selectedSubmission._id)}>Approve</Button>
                   </DialogFooter>
                 </div>
               )}
@@ -630,7 +632,7 @@ export default function HRFormsPage() {
   }
 
   return (
-    <main className="min-h-dvh flex flex-col">
+    <main className="min-h-dvh flex flex-col text-[0.75rem]">
       <header className="border-b bg-card flex-shrink-0">
         <TopBar
           onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
@@ -642,40 +644,40 @@ export default function HRFormsPage() {
       <section className="flex flex-1 overflow-hidden relative">
         <aside
           className={`
-            fixed left-0 top-[57px] bottom-0 z-30 w-[260px] 
+            fixed left-0 top-[43px] bottom-0 z-30 w-[195px] 
             bg-card border-r transition-transform duration-300
             overflow-y-auto scrollbar-hide
             ${leftSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           `}
           aria-label="Project navigation"
         >
-          <div className="p-2">
+          <div className="p-1.5">
             <SideNav />
           </div>
         </aside>
 
         <div
           className={`
-            flex-1 flex flex-col transition-all duration-300 pb-24 w-fulln
-            ${leftSidebarOpen ? "ml-[260px]" : "ml-0"}
-            ${rightSidebarOpen ? "mr-[320px]" : "mr-0"}
+            flex-1 flex flex-col transition-all duration-300 pb-18 w-fulln
+            ${leftSidebarOpen ? "ml-[195px]" : "ml-0"}
+            ${rightSidebarOpen ? "mr-[240px]" : "mr-0"}
           `}
         >
-          <div className="flex-1 flex flex-col gap-3 p-4 overflow-hidden w-full ">
+          <div className="flex-1 flex flex-col gap-2 p-3 overflow-hidden w-full ">
             {pageContent()}
           </div>
         </div>
 
         <aside
           className={`
-            fixed right-0 top-[57px] bottom-0 z-30 w-[320px]
+            fixed right-0 top-[43px] bottom-0 z-30 w-[240px]
             bg-card border-l transition-transform duration-300
             overflow-y-auto scrollbar-hide
             ${rightSidebarOpen ? "translate-x-0" : "translate-x-full"}
           `}
           aria-label="Project info"
         >
-          <div className="p-3">
+          <div className="p-2">
             <RightPanel />
           </div>
         </aside>

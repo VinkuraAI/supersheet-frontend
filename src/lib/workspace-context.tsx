@@ -58,21 +58,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (error: any) {
-        console.error("Failed to fetch workspaces:", error);
-        
         // Handle 401 Unauthorized - user needs to log in
         if (error.response?.status === 401) {
+          // User is not authenticated, silently handle it
           localStorage.removeItem("user");
-          // Optionally redirect to login
-          // router.push('/auth');
+          setWorkspaces([]);
+          setSelectedWorkspaceState(null);
+          // Only log in development mode
+          if (process.env.NODE_ENV === 'development') {
+            console.log("User not authenticated, clearing workspace data");
+          }
+        } else {
+          // Log other errors
+          console.error("Failed to fetch workspaces:", error);
         }
-        
-        // For development, you can set mock data here
-        // setWorkspaces([{
-        //   _id: 'mock-workspace-1',
-        //   name: 'Sample Workspace',
-        //   userId: 'mock-user-1'
-        // }]);
       } finally {
         setIsLoading(false);
       }

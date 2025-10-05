@@ -59,29 +59,52 @@ import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import apiClient from "@/utils/api.client";
+import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog";
 
 function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen }: PageContentProps) {
   const { selectedWorkspace, isLoading } = useWorkspace();
   const [rows, setRows] = useState<any[]>([]);
   const [schema, setSchema] = useState<any[]>([]);
+  const [workspaceData, setWorkspaceData] = useState<any>(null);
 
   useEffect(() => {
     if (selectedWorkspace) {
-      const fetchWorkspaceData = async () => {
-        try {
-          const response = await apiClient.get(`/api/workspaces/${selectedWorkspace._id}`);
-          setRows(response.data.table.rows || []);
-          setSchema(response.data.table.schema || []);
-        } catch (error) {
-          console.error("Failed to fetch workspace data:", error);
-        }
-      };
       fetchWorkspaceData();
     }
   }, [selectedWorkspace]);
 
+  const fetchWorkspaceData = async () => {
+    if (!selectedWorkspace) return;
+    
+    try {
+      const response = await apiClient.get(`/api/workspaces/${selectedWorkspace._id}`);
+      setRows(response.data.table.rows || []);
+      
+      // Deduplicate schema by column name, keeping the first occurrence
+      const rawSchema = response.data.table.schema || [];
+      const uniqueSchema = rawSchema.filter((col: any, index: number, self: any[]) => 
+        index === self.findIndex((c: any) => c.name === col.name)
+      );
+      
+      // Add Feedback column if it doesn't exist (appears after Notes column)
+      if (!uniqueSchema.find((col: any) => col.name === "Feedback")) {
+        uniqueSchema.push({
+          name: "Feedback",
+          type: "text",
+          required: false
+        });
+      }
+      
+      setSchema(uniqueSchema);
+      
+      setWorkspaceData(response.data);
+    } catch (error) {
+      console.error("Failed to fetch workspace data:", error);
+    }
+  };
+
   return (
-    <main className="min-h-dvh flex flex-col">
+    <main className="min-h-dvh flex flex-col text-[0.75rem]">
       <header className="border-b bg-card flex-shrink-0">
         <TopBar
           onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
@@ -94,14 +117,14 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
         {/* Left sidebar - fixed and toggleable */}
         <aside
           className={`
-            fixed left-0 top-[57px] bottom-0 z-30 w-[260px] 
+            fixed left-0 top-[43px] bottom-0 z-30 w-[195px] 
             bg-card border-r transition-transform duration-300
             overflow-y-auto scrollbar-hide
             ${leftSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           `}
           aria-label="Project navigation"
         >
-          <div className="p-2">
+          <div className="p-1.5">
             <SideNav />
           </div>
         </aside>
@@ -109,49 +132,55 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
         {/* Center content - adjusts margin based on sidebar state */}
         <div
           className={`
-            flex-1 flex flex-col transition-all duration-300 pb-24 w-fulln
-            ${leftSidebarOpen ? "ml-[260px]" : "ml-0"}
-            ${rightSidebarOpen ? "mr-[320px]" : "mr-0"}
+            flex-1 flex flex-col transition-all duration-300 pb-18 min-w-0
+            ${leftSidebarOpen ? "ml-[195px]" : "ml-0"}
+            ${rightSidebarOpen ? "mr-[240px]" : "mr-0"}
           `}
         >
-          <div className="flex-1 flex flex-col gap-3 p-4 overflow-hidden w-full ">
+          <div className="flex-1 flex flex-col gap-2 p-3 min-w-0 min-h-0">
             {isLoading ? (
-              <div className="flex-1 flex flex-col gap-3 overflow-hidden w-full ">
-                <Skeleton className="h-16 w-full" />
+              <div className="flex-1 flex flex-col gap-2 overflow-hidden w-full ">
+                <Skeleton className="h-12 w-full" />
                 <Skeleton className="flex-1 w-full" />
               </div>
             ) : selectedWorkspace ? (
               <>
                 <div className="bg-card border rounded-md flex-shrink-0">
-                  <div className="flex items-center justify-between border-b px-4 py-3">
-                    <h1 className="text-lg font-semibold text-pretty">All open</h1>
-                    <Link href={`/workspace/${selectedWorkspace._id}/forms`}>
-                      <Button variant="outline" size="sm" className="ml-4">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Workspace Form
-                      </Button>
-                    </Link>
+                  <div className="flex items-center justify-between border-b px-3 py-2">
+                    <h1 className="text-sm font-semibold text-pretty">
+                      {selectedWorkspace.name}
+                    </h1>
+                    <div className="flex items-center gap-1.5">
+                      <JobDescriptionDialog
+                        workspaceId={selectedWorkspace._id}
+                        workspaceName={selectedWorkspace.name}
+                        initialJd={workspaceData?.jd || ""}
+                        onJdUpdate={(newJd) => {
+                          setWorkspaceData((prev: any) => ({ ...prev, jd: newJd }));
+                        }}
+                      />
+                      <Link href={`/workspace/${selectedWorkspace._id}/forms`}>
+                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                          <FileText className="mr-1.5 h-3 w-3" />
+                          Workspace Form
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <div className="p-3">
+                  <div className="p-2">
                     <Suspense>
                       <FiltersBar />
                     </Suspense>
                   </div>
                 </div>
 
-                <div className="bg-card border rounded-md flex-1 overflow-hidden flex flex-col">
-                  {rows.length > 0 ? (
-                    <TicketsTable tickets={rows} schema={schema} setData={setRows} />
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-lg text-muted-foreground">There are no candidates in this workspace yet.</p>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Approve candidates from the workspace form to see them here.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                <div className="bg-card border rounded-md flex-1 min-h-0 flex flex-col">
+                  <TicketsTable 
+                    tickets={rows} 
+                    schema={schema} 
+                    setData={setRows}
+                    onRefreshData={fetchWorkspaceData}
+                  />
                 </div>
               </>
             ) : (
@@ -163,14 +192,14 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
         {/* Right context panel - fixed and toggleable */}
         <aside
           className={`
-            fixed right-0 top-[57px] bottom-0 z-30 w-[320px]
+            fixed right-0 top-[43px] bottom-0 z-30 w-[240px]
             bg-card border-l transition-transform duration-300
             overflow-y-auto scrollbar-hide
             ${rightSidebarOpen ? "translate-x-0" : "translate-x-full"}
           `}
           aria-label="Project info"
         >
-          <div className="p-3">
+          <div className="p-2">
             <RightPanel />
           </div>
         </aside>

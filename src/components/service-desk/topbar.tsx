@@ -15,6 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import ProfileDialog from "@/components/auth/ProfileDialog"
@@ -61,26 +63,26 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
   }
 
   return (
-    <div className="mx-auto flex w-full items-center gap-3 p-3">
+    <div className="mx-auto flex w-full items-center gap-2 p-2">
       <Button
         variant="ghost"
         size="icon"
         onClick={onToggleLeftSidebar}
         aria-label="Toggle navigation"
-        className="h-8 w-8"
+        className="h-6 w-6"
       >
-        <Menu className="size-5" />
+        <Menu className="size-4" />
       </Button>
 
       {/* App launcher / logo placeholder */}
-      <div className="h-8 w-8 rounded bg-muted" aria-hidden />
+      <div className="h-6 w-6 rounded bg-muted" aria-hidden />
 
       {/* Breadcrumbs */}
       <div className="hidden min-w-0 md:block">
         <Breadcrumb>
-          <BreadcrumbList className="text-sm">
+          <BreadcrumbList className="text-xs">
             {isWorkspaceLoading ? (
-              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-24" />
             ) : selectedWorkspace ? (
               <BreadcrumbItem>
                 <BreadcrumbPage>{selectedWorkspace.name}</BreadcrumbPage>
@@ -95,36 +97,36 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
       </div>
 
       {/* Search */}
-      <div className="ml-auto flex w-full max-w-[520px] items-center gap-2">
-        <Input placeholder="Search" className="h-9" aria-label="Search" />
-        <Button size="sm" className="h-9" disabled={!selectedWorkspace}>
-          <Plus className="mr-2 size-4" />
+      <div className="ml-auto flex w-full max-w-[390px] items-center gap-1.5">
+        <Input placeholder="Search" className="h-7 text-xs" aria-label="Search" />
+        <Button size="sm" className="h-7 px-2 text-xs" disabled={!selectedWorkspace}>
+          <Plus className="mr-1.5 size-3" />
           Create
         </Button>
         <button
           aria-label="Notifications"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background hover:bg-muted"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border bg-background hover:bg-muted"
         >
-          <Bell className="size-4" />
+          <Bell className="size-3" />
         </button>
         <button
           aria-label="Help"
           onClick={onToggleRightSidebar}
-          className={`inline-flex h-9 w-9 items-center justify-center rounded-md border hover:bg-muted ${
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-md border hover:bg-muted ${
             rightSidebarOpen ? "bg-muted" : "bg-background"
           }`}
         >
-          <HelpCircle className="size-4" />
+          <HelpCircle className="size-3" />
         </button>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="ghost" className="h-9 w-9 rounded-full">
+            <Button variant="ghost" className="h-7 w-7 rounded-full p-0">
               {isUserLoading ? (
-                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-6 w-6 rounded-full" />
               ) : (
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-6 w-6">
                   <AvatarImage src={user?.avatar || ""} alt={user?.fullName} />
-                  <AvatarFallback className={`text-sm text-primary-foreground ${avatarColor}`}>
+                  <AvatarFallback className={`text-xs text-primary-foreground ${avatarColor}`}>
                     {getInitials(user?.fullName || "")}
                   </AvatarFallback>
                 </Avatar>
@@ -132,6 +134,9 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Profile Settings</DialogTitle>
+            </DialogHeader>
             <ProfileDialog />
           </DialogContent>
         </Dialog>

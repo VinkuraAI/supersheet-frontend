@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, Pencil, Trash2, Plus } from "lucide-react"
+import { ChevronDown, Pencil, Trash2, Plus, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 import apiClient from "@/utils/api.client"
 import {
@@ -32,6 +32,12 @@ interface Workspace {
   _id: string
   name: string
   userId: string
+}
+
+interface WorkspaceForm {
+  _id: string
+  title: string
+  workspaceId: string
 }
 
 const initialSections = [
@@ -65,6 +71,8 @@ export function SideNav() {
   const { user } = useAuth();
   const { workspaces, setWorkspaces, selectedWorkspace, setSelectedWorkspace, isLoading } = useWorkspace();
   const [isWorkspacesOpen, setIsWorkspacesOpen] = useState(true)
+  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(new Set())
+  const [workspaceForms, setWorkspaceForms] = useState<Record<string, WorkspaceForm[]>>({})
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null)
   const [newWorkspaceName, setNewWorkspaceName] = useState("")
   const [showRenameDialog, setShowRenameDialog] = useState(false)
@@ -79,6 +87,49 @@ export function SideNav() {
       inputRef.current.focus()
     }
   }, [editingWorkspaceId])
+
+  // Fetch forms for a workspace when it's expanded
+  const fetchWorkspaceForms = async (workspaceId: string) => {
+    if (workspaceForms[workspaceId]) return; // Already fetched
+
+    try {
+      const response = await apiClient.get(`/api/workspaces/${workspaceId}/forms`);
+      setWorkspaceForms(prev => ({
+        ...prev,
+        [workspaceId]: response.data || []
+      }));
+    } catch (error) {
+      console.error(`Failed to fetch forms for workspace ${workspaceId}:`, error);
+      setWorkspaceForms(prev => ({
+        ...prev,
+        [workspaceId]: []
+      }));
+    }
+  };
+
+  const toggleWorkspaceExpansion = (workspaceId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking chevron
+    
+    const newExpanded = new Set(expandedWorkspaces);
+    if (newExpanded.has(workspaceId)) {
+      newExpanded.delete(workspaceId);
+    } else {
+      newExpanded.add(workspaceId);
+      fetchWorkspaceForms(workspaceId);
+    }
+    setExpandedWorkspaces(newExpanded);
+  };
+
+  const handleWorkspaceClick = (workspace: Workspace, e: React.MouseEvent) => {
+    e.preventDefault();
+    setSelectedWorkspace(workspace);
+  };
+
+  const handleFormClick = (workspaceId: string, formId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/workspace/${workspaceId}/forms`);
+  };
 
   const toggleWorkspaces = () => {
     setIsWorkspacesOpen(!isWorkspacesOpen)
@@ -163,31 +214,31 @@ export function SideNav() {
   return (
     <>
       <Toaster richColors />
-      <nav className="text-sm">
+      <nav className="text-xs">
         {initialSections.map((section) => (
-          <div key={section.title} className="mb-3">
-            <div className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+          <div key={section.title} className="mb-2">
+            <div className="px-1.5 pb-0.5 text-[0.65rem] font-medium text-muted-foreground">
               {section.title}
             </div>
-            <ul className="space-y-0.5">
+            <ul className="space-y-0">
               {section.items.map((item: any) => (
                 <li key={item.label}>
                   {item.action === "create-workspace" ? (
                     <button
                       onClick={() => setShowCreateWorkspaceDialog(true)}
                       className={cn(
-                        "w-full flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted text-left transition-colors",
+                        "w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted text-left transition-colors",
                         "hover:bg-blue-50 hover:text-blue-700 font-medium"
                       )}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3 w-3" />
                       {item.label}
                     </button>
                   ) : (
                     <a
                       href="#"
                       className={cn(
-                        "block rounded-md px-2 py-1.5 hover:bg-muted",
+                        "block rounded-md px-1.5 py-1 hover:bg-muted",
                         item.active ? "bg-muted font-medium" : ""
                       )}
                       aria-current={item.active ? "page" : undefined}
@@ -230,35 +281,77 @@ export function SideNav() {
                                 className="h-8"
                               />
                             ) : (
-                              <ContextMenu>
-                                <ContextMenuTrigger>
-                                  <a
-                                    href="#"
-                                    onClick={() => setSelectedWorkspace(workspace)}
-                                    className={cn(
-                                      "block rounded-md px-2 py-1.5 hover:bg-muted",
-                                      selectedWorkspace?._id === workspace._id ? "bg-muted font-medium" : ""
+                              <div>
+                                <ContextMenu>
+                                  <ContextMenuTrigger>
+                                    <div className="flex items-center group">
+                                      <button
+                                        onClick={(e) => toggleWorkspaceExpansion(workspace._id, e)}
+                                        className="p-1 hover:bg-muted rounded flex-shrink-0"
+                                      >
+                                        <ChevronDown
+                                          className={cn(
+                                            "h-3 w-3 transform transition-transform",
+                                            expandedWorkspaces.has(workspace._id) ? "rotate-180" : ""
+                                          )}
+                                        />
+                                      </button>
+                                      <a
+                                        href="#"
+                                        onClick={(e) => handleWorkspaceClick(workspace, e)}
+                                        className={cn(
+                                          "flex-1 rounded-md px-2 py-1.5 hover:bg-muted",
+                                          selectedWorkspace?._id === workspace._id ? "bg-muted font-medium" : ""
+                                        )}
+                                      >
+                                        {workspace.name}
+                                      </a>
+                                    </div>
+                                  </ContextMenuTrigger>
+                                  <ContextMenuContent>
+                                    <ContextMenuItem
+                                      onClick={() => handleRenameClick(workspace)}
+                                    >
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Rename
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                      className="text-red-600"
+                                      onClick={() => handleDeleteClick(workspace)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete Workspace
+                                    </ContextMenuItem>
+                                  </ContextMenuContent>
+                                </ContextMenu>
+
+                                {/* Nested Forms List */}
+                                {expandedWorkspaces.has(workspace._id) && (
+                                  <div className="pl-6 pt-1 space-y-0.5">
+                                    {workspaceForms[workspace._id] === undefined ? (
+                                      <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
+                                        Loading forms...
+                                      </p>
+                                    ) : workspaceForms[workspace._id].length > 0 ? (
+                                      workspaceForms[workspace._id].map((form) => (
+                                        <a
+                                          key={form._id}
+                                          href="#"
+                                          onClick={(e) => handleFormClick(workspace._id, form._id, e)}
+                                          className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted text-[0.65rem]"
+                                        >
+                                          <FileText className="h-3 w-3 text-muted-foreground" />
+                                          {form.title}
+                                        </a>
+                                      ))
+                                    ) : (
+                                      <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
+                                        No forms yet
+                                      </p>
                                     )}
-                                  >
-                                    {workspace.name}
-                                  </a>
-                                </ContextMenuTrigger>
-                                <ContextMenuContent>
-                                  <ContextMenuItem
-                                    onClick={() => handleRenameClick(workspace)}
-                                  >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Rename
-                                  </ContextMenuItem>
-                                  <ContextMenuItem
-                                    className="text-red-600"
-                                    onClick={() => handleDeleteClick(workspace)}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete Workspace
-                                  </ContextMenuItem>
-                                </ContextMenuContent>
-                              </ContextMenu>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </li>
                         ))}
