@@ -172,6 +172,7 @@ function TruncatedCell({
 }
 
 import { useWorkspace } from "@/lib/workspace-context";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function TicketsTable({
   tickets,
@@ -186,6 +187,7 @@ export function TicketsTable({
 }) {
   const { selectedWorkspace } = useWorkspace();
   const disabled = !selectedWorkspace;
+  const isMobile = useIsMobile();
 
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
@@ -194,31 +196,82 @@ export function TicketsTable({
     col: string;
   } | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [currentData, setCurrentData] = useState<any[]>(tickets);
   const resizingRef = useRef<{
     col: string;
     startX: number;
     startWidth: number;
   } | null>(null);
-  const initialData = useRef(tickets);
+  const initialData = useRef<any[]>([]);
   const [isSynced, setIsSynced] = useState(true);
   const [showSyncWarning, setShowSyncWarning] = useState(false);
 
+  // Initialize initialData and currentData once when component mounts with the original data
   useEffect(() => {
-    if (selectedWorkspace) {
+    if (selectedWorkspace && !initialData.current.length) {
+      // First check if there's local storage data
       const localData = localStorage.getItem(
         `workspace-${selectedWorkspace._id}-data`
       );
       if (localData) {
-        setData(JSON.parse(localData));
+        const parsedData = JSON.parse(localData);
+        setData(parsedData);
+        initialData.current = [...parsedData]; // Store original data
+        setCurrentData(parsedData);
+      } else {
+        // Use the tickets prop data as the baseline
+        initialData.current = [...tickets]; // Store original data
+        setCurrentData(tickets);
       }
-      initialData.current = tickets;
     }
-  }, [selectedWorkspace, setData]);
+  }, [selectedWorkspace]); // Only run when workspace changes, not tickets
+
+  // Track if there are uncommitted changes using a ref
+  const hasUncommittedChangesRef = useRef(false);
+
+  // Update our ref whenever currentData changes to track if we have uncommitted changes
+  useEffect(() => {
+    const added = currentData.some((row) => row.isNew);
+    const updated = currentData.some((row) => {
+      const initialRow = initialData.current.find((r) => r._id === row._id);
+      return (
+        initialRow &&
+        JSON.stringify(initialRow) !== JSON.stringify(row) &&
+        !row.isNew
+      );
+    });
+    const deleted = initialData.current.some(
+      (initialRow) => !currentData.some((row) => row._id === initialRow._id)
+    );
+    
+    hasUncommittedChangesRef.current = added || updated || deleted;
+  }, [currentData, initialData]);
+
+  // Update currentData when tickets prop changes from parent (after sync or initial load)
+  // But only if there are no uncommitted local changes
+  useEffect(() => {
+    // Only update from parent if there are no local uncommitted changes
+    if (!hasUncommittedChangesRef.current) {
+      setCurrentData(tickets);
+      // After successful sync, update initialData to match the fresh data from parent
+      if (initialData.current.length !== tickets.length || 
+          JSON.stringify(initialData.current) !== JSON.stringify(tickets)) {
+        initialData.current = [...tickets];
+      }
+    }
+  }, [tickets]);
 
   useEffect(() => {
     const checkSyncStatus = () => {
-      const added = tickets.some((row) => row.isNew);
-      const updated = tickets.some((row) => {
+      // Only check sync status if initialData has been properly initialized
+      if (initialData.current.length === 0) {
+        setIsSynced(true);
+        setShowSyncWarning(false);
+        return;
+      }
+      
+      const added = currentData.some((row) => row.isNew);
+      const updated = currentData.some((row) => {
         const initialRow = initialData.current.find((r) => r._id === row._id);
         return (
           initialRow &&
@@ -227,7 +280,7 @@ export function TicketsTable({
         );
       });
       const deleted = initialData.current.some(
-        (initialRow) => !tickets.some((row) => row._id === initialRow._id)
+        (initialRow) => !currentData.some((row) => row._id === initialRow._id)
       );
 
       if (added || updated || deleted) {
@@ -240,7 +293,7 @@ export function TicketsTable({
     };
 
     checkSyncStatus();
-  }, [tickets]);
+  }, [currentData]);
 
   useEffect(() => {
     const initialWidths: Record<string, number> = { checkbox: 38 };
@@ -301,7 +354,7 @@ export function TicketsTable({
   const handleSaveEdit = () => {
     if (!editingCell) return;
     const { row, col } = editingCell;
-    const newData = tickets.map((item, i) =>
+    const newData = currentData.map((item, i) =>
       i === row
         ? {
             ...item,
@@ -309,7 +362,8 @@ export function TicketsTable({
           }
         : item
     );
-    setData(newData);
+    setCurrentData(newData);
+    setData(newData); // Notify parent
     if (selectedWorkspace) {
       localStorage.setItem(
         `workspace-${selectedWorkspace._id}-data`,
@@ -345,8 +399,9 @@ export function TicketsTable({
     schema.forEach((col) => {
       newRow.data[col.name] = ""; // Initialize with empty strings
     });
-    const newData = [...tickets, newRow];
-    setData(newData);
+    const newData = [...currentData, newRow];
+    setCurrentData(newData);
+    setData(newData); // Notify parent
     if (selectedWorkspace) {
       localStorage.setItem(
         `workspace-${selectedWorkspace._id}-data`,
@@ -357,10 +412,11 @@ export function TicketsTable({
 
   const handleDeleteRows = () => {
     if (disabled) return;
-    const newData = tickets.filter(
+    const newData = currentData.filter(
       (_: any, index: number) => !selectedRows.has(index)
     );
-    setData(newData);
+    setCurrentData(newData);
+    setData(newData); // Notify parent
     if (selectedWorkspace) {
       localStorage.setItem(
         `workspace-${selectedWorkspace._id}-data`,
@@ -375,25 +431,33 @@ export function TicketsTable({
     const newColumnName = prompt("Enter new column name");
     if (newColumnName) {
       const newColumn = { name: newColumnName, type: "text", isDefault: false };
-      // I need to update the schema in the parent component
-      // For now, I will just update the local state
-      const newSchema = [...schema, newColumn];
-      const newData = tickets.map((row) => ({
+      // This component doesn't own the schema, it should be passed up.
+      // For now, let's update the local filteredSchema state to make it appear.
+      setFilteredSchema([...filteredSchema, newColumn]);
+
+      const newData = currentData.map((row) => ({
         ...row,
         data: {
           ...row.data,
           [newColumnName]: "",
         },
       }));
-      setData(newData);
+      setCurrentData(newData);
+      setData(newData); // Notify parent
+      if (selectedWorkspace) {
+        localStorage.setItem(
+          `workspace-${selectedWorkspace._id}-data`,
+          JSON.stringify(newData)
+        );
+      }
     }
   };
 
   const handleSync = async () => {
     if (disabled) return;
 
-    const added = tickets.filter((row) => row.isNew);
-    const updated = tickets.filter((row) => {
+    const added = currentData.filter((row) => row.isNew);
+    const updated = currentData.filter((row) => {
       const initialRow = initialData.current.find((r) => r._id === row._id);
       return (
         initialRow &&
@@ -402,7 +466,7 @@ export function TicketsTable({
       );
     });
     const deleted = initialData.current.filter(
-      (initialRow) => !tickets.some((row) => row._id === initialRow._id)
+      (initialRow) => !currentData.some((row) => row._id === initialRow._id)
     );
 
     try {
@@ -411,9 +475,14 @@ export function TicketsTable({
         updated,
         deleted,
       });
-      setIsSynced(true);
-      setShowSyncWarning(false);
-      alert("Sync successful!");
+
+      if (selectedWorkspace) {
+        localStorage.removeItem(`workspace-${selectedWorkspace._id}-data`);
+      }
+
+      alert("Sync successful! The page will now reload to reflect the changes.");
+      window.location.reload();
+
     } catch (error) {
       console.error("Sync failed:", error);
       alert("Sync failed. Please try again.");
@@ -438,7 +507,7 @@ export function TicketsTable({
   const handleSelectAll = (checked: boolean) => {
     if (disabled) return;
     if (checked) {
-      setSelectedRows(new Set(tickets.map((_, index) => index)));
+      setSelectedRows(new Set(currentData.map((_, index) => index)));
     } else {
       setSelectedRows(new Set());
     }
@@ -541,16 +610,16 @@ export function TicketsTable({
                 <Checkbox
                   aria-label="Select all"
                   checked={
-                    selectedRows.size === tickets.length && tickets.length > 0
+                    selectedRows.size === currentData.length && currentData.length > 0
                   }
                   onCheckedChange={(checked) =>
                     handleSelectAll(checked === true)
                   }
                 />
-                <div
+                {!isMobile && <div
                   className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
                   onMouseDown={(e) => handleMouseDown("checkbox", e)}
-                />
+                />}
               </TableHead>
               {schema.map((col, colIndex) => (
                 <TableHead
@@ -563,10 +632,10 @@ export function TicketsTable({
                   }}
                 >
                   {col.name}
-                  <div
+                  {!isMobile && <div
                     className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
                     onMouseDown={(e) => handleMouseDown(col.name, e)}
-                  />
+                  />}
                 </TableHead>
               ))}
             </TableRow>

@@ -84,6 +84,16 @@ export default function CandidateFormPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (form) {
+      for (const field of form.fields) {
+        if (!answers[field.id]) {
+          alert(`Please answer the question: "${field.question}"`);
+          return;
+        }
+      }
+    }
+
     if (!resume) {
       alert('A resume is required.');
       return;

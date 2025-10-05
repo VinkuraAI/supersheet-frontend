@@ -1,12 +1,14 @@
 "use client"
-
-import { Suspense, useState, useEffect } from "react"
+import { Suspense, useState, useEffect} from "react"
+import { useParams } from "next/navigation"
 import { TopBar } from "@/components/service-desk/topbar"
 import { SideNav } from "@/components/service-desk/sidenav"
 import { FiltersBar } from "@/components/service-desk/filters-bar"
 import { TicketsTable } from "@/components/service-desk/tickets-table"
 import { RightPanel } from "@/components/service-desk/right-panel"
 import { AiChatWidget } from "@/components/service-desk/ai-chat-widget"
+import { Sheet, SheetContent, SheetTrigger, SheetOverlay } from "@/components/ui/sheet"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 import { NoWorkspaceSelected } from "@/components/service-desk/no-workspace-selected";
 import { useWorkspace } from "@/lib/workspace-context";
@@ -15,15 +17,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function WorkspacePage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   // Handle responsive sidebar behavior
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth
       
-      // Close both sidebars when screen is too narrow (below 1280px)
       if (width < 1272) {
         setLeftSidebarOpen(false)
+        setRightSidebarOpen(false)
+      } else {
+        setLeftSidebarOpen(true)
         setRightSidebarOpen(false)
       }
     }
@@ -36,7 +41,7 @@ export default function WorkspacePage() {
 
     // Cleanup
     return () => window.removeEventListener('resize', handleResize)
-  }, [leftSidebarOpen, rightSidebarOpen])
+  }, [])
 
   return (
     <PageContent 
@@ -44,6 +49,7 @@ export default function WorkspacePage() {
       rightSidebarOpen={rightSidebarOpen} 
       setLeftSidebarOpen={setLeftSidebarOpen} 
       setRightSidebarOpen={setRightSidebarOpen} 
+      isMobile={isMobile}
     />
   )
 }
@@ -53,6 +59,7 @@ interface PageContentProps {
   rightSidebarOpen: boolean;
   setLeftSidebarOpen: (open: boolean) => void;
   setRightSidebarOpen: (open: boolean) => void;
+  isMobile: boolean;
 }
 
 import { Button } from "@/components/ui/button";
@@ -61,9 +68,12 @@ import Link from "next/link";
 import apiClient from "@/utils/api.client";
 import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog";
 
-function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen }: PageContentProps) {
-  const { selectedWorkspace, isLoading } = useWorkspace();
+function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen, isMobile }: PageContentProps) {
+  const { selectedWorkspace, isLoading, workspaces, setSelectedWorkspace } = useWorkspace();
+  const params = useParams();
+  const workspaceId = params.id as string;
   const [rows, setRows] = useState<any[]>([]);
+  const [initialRows, setInitialRows] = useState<any[]>([]);
   const [schema, setSchema] = useState<any[]>([]);
   const [workspaceData, setWorkspaceData] = useState<any>(null);
 

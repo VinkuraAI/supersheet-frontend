@@ -63,9 +63,15 @@ interface PageContentProps {
 }
 
 function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen }: PageContentProps) {
-  const { selectedWorkspace, isLoading } = useWorkspace();
+  const { selectedWorkspace, isLoading, setSelectedWorkspace } = useWorkspace();
   const [tickets, setTickets] = useState<any[]>([]);
   const [schema, setSchema] = useState<any[]>(INITIAL_SCHEMA);
+
+  useEffect(() => {
+    if (selectedWorkspace) {
+      setSelectedWorkspace(null);
+    }
+  }, [selectedWorkspace, setSelectedWorkspace]);
 
   return (
     <main className="min-h-dvh flex flex-col">

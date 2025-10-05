@@ -101,7 +101,7 @@ export default function HRFormsPage() {
       if (!workspaceId) return;
       setIsLoading(true);
       try {
-        const response = await apiClient.get(`/api/workspaces/${workspaceId}/forms`);
+        const response = await apiClient.get(`/api/forms/workspace/${workspaceId}`);
         const forms = response.data;
         if (forms && forms.length > 0) {
           const formData = forms[0]; // Use the first form found
@@ -211,6 +211,7 @@ export default function HRFormsPage() {
       title: formTitle,
       description: formDescription,
       fields: fields,
+      workspaceId: workspaceId,
     };
 
     try {
