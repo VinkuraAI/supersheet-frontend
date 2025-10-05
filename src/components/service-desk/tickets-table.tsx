@@ -456,34 +456,28 @@ export function TicketsTable({
     setEditValue("");
   };
 
-  const sendMailAndUpdate = (rowIndex: number, newStatus: string) => {
-    const row = currentData[rowIndex];
-    const rowId = row._id;
-    const workspaceId = selectedWorkspace._id;
+  const handleStatusChange = async (rowIndex: number, newStatus: string) => {
+    if (disabled) return;
 
-    const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Informed' };
+    const oldData = [...currentData];
+    const rowToUpdate = oldData[rowIndex];
+    
+    if (!rowToUpdate) return;
 
-    apiClient.post(`/api/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {
-        status: newStatus
-    }).then(() => {
-        const newData = [...currentData];
-        newData[rowIndex] = { ...row, data: updatedRowData };
-        setCurrentData(newData);
-        setData(newData);
-        initialData.current = newData; // Mark as synced
-    });
-  }
+    const rowId = rowToUpdate._id;
 
-  const updateStatusOnly = (rowIndex: number, newStatus: string) => {
+    // Create the new data with the updated status
+    const updatedRowData = { ...rowToUpdate.data, Status: newStatus };
+
+    // Optimistically update the UI
     const newData = currentData.map((item, i) =>
       i === rowIndex
         ? {
             ...item,
-            data: { ...item.data, Status: newStatus },
+            data: updatedRowData,
           }
         : item
     );
-    setCurrentData(newData);
     setData(newData);
     if (selectedWorkspace) {
       localStorage.setItem(
