@@ -84,10 +84,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setSelectedWorkspaceState(workspace);
     if (workspace) {
       localStorage.setItem("selectedWorkspaceId", workspace._id);
-      router.push(`/workspace/${workspace._id}`);
     } else {
       localStorage.removeItem("selectedWorkspaceId");
-      router.push('/workspace');
     }
   };
 
