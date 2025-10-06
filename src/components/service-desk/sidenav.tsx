@@ -123,6 +123,7 @@ export function SideNav() {
   const handleWorkspaceClick = (workspace: Workspace, e: React.MouseEvent) => {
     e.preventDefault();
     setSelectedWorkspace(workspace);
+    router.push(`/workspace/${workspace._id}`);
   };
 
   const handleFormClick = (workspaceId: string, formId: string, e: React.MouseEvent) => {
@@ -299,7 +300,7 @@ export function SideNav() {
                                         />
                                       </button>
                                       <a
-                                        href="#"
+                                        href={`/workspace/${workspace._id}`}
                                         onClick={(e) => handleWorkspaceClick(workspace, e)}
                                         className={cn(
                                           "flex-1 rounded-md px-2 py-1.5 hover:bg-muted",
