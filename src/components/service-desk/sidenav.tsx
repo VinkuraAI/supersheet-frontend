@@ -226,9 +226,11 @@ export function SideNav() {
                   {item.action === "create-workspace" ? (
                     <button
                       onClick={() => setShowCreateWorkspaceDialog(true)}
+                      disabled={workspaces.length >= 2}
                       className={cn(
                         "w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted text-left transition-colors",
-                        "hover:bg-blue-50 hover:text-blue-700 font-medium"
+                        "hover:bg-blue-50 hover:text-blue-700 font-medium",
+                        "disabled:cursor-not-allowed disabled:opacity-50"
                       )}
                     >
                       <Plus className="h-3 w-3" />

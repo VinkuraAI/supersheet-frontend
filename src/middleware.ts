@@ -1,19 +1,48 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const accessToken = request.cookies.get('access_token');
+  const { pathname } = request.nextUrl;
 
+  // If no access token, redirect to the login page for any protected route.
   if (!accessToken) {
-    // If no access token, redirect to the login page
-    return NextResponse.redirect(new URL('/auth', request.url))
+    return NextResponse.redirect(new URL('/auth', request.url));
   }
 
-  // If there is a token, allow the request to proceed
-  return NextResponse.next()
+  // If the user is logged in and tries to access the welcome page
+  if (pathname.startsWith('/welcome')) {
+    try {
+      // We must use the full backend URL here as this is a server-to-server request.
+      // The /api proxy is for client-side requests only.
+      const backendUrl = 'https://supersheet-backend.onrender.com/workspaces';
+      
+      const response = await fetch(backendUrl, {
+        headers: {
+          'Cookie': `access_token=${accessToken.value}`
+        }
+      });
+
+      if (response.ok) {
+        const workspaces = await response.json();
+        // If the user has one or more workspaces, redirect them to the main app.
+        if (workspaces && workspaces.length > 0) {
+          return NextResponse.redirect(new URL('/workspace', request.url));
+        }
+      }
+    } catch (error) {
+      console.error("Middleware error fetching workspaces:", error);
+      // If the API call fails for any reason, it's safest to let them proceed
+      // to the welcome page instead of blocking them.
+      return NextResponse.next();
+    }
+  }
+
+  // If there is a token and the route is not /welcome, allow the request to proceed.
+  return NextResponse.next();
 }
 
 // See "Matching Paths" below to learn more
 export const config = {
-  matcher: ['/workspace/:path*', '/workspace-setup/:path*'],
+  matcher: ['/workspace/:path*', '/workspace-setup/:path*', '/welcome'],
 }
