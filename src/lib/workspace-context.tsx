@@ -39,7 +39,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const response = await apiClient.get<Workspace[]>("/api/workspaces/");
+        const response = await apiClient.get<Workspace[]>("/workspaces/");
         setWorkspaces(response.data);
 
         const pathSegments = pathname.split('/');

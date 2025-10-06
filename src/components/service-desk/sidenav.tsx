@@ -123,7 +123,6 @@ export function SideNav() {
   const handleWorkspaceClick = (workspace: Workspace, e: React.MouseEvent) => {
     e.preventDefault();
     setSelectedWorkspace(workspace);
-    router.push(`/workspace/${workspace._id}`);
   };
 
   const handleFormClick = (workspaceId: string, formId: string, e: React.MouseEvent) => {
