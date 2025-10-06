@@ -101,7 +101,7 @@ export default function HRFormsPage() {
       if (!workspaceId) return;
       setIsLoading(true);
       try {
-        const response = await apiClient.get(`/api/forms/workspace/${workspaceId}`);
+        const response = await apiClient.get(`/forms/workspace/${workspaceId}`);
         const forms = response.data;
         if (forms && forms.length > 0) {
           const formData = forms[0]; // Use the first form found
@@ -215,7 +215,7 @@ export default function HRFormsPage() {
     };
 
     try {
-      const response = await apiClient.post("/api/forms", form);
+      const response = await apiClient.post("/forms", form);
       setFormId(response.data._id); // Save the new form ID
       setIsFormLocked(true)
       setIsBuilding(false)
@@ -229,7 +229,7 @@ export default function HRFormsPage() {
   const handleApprove = async (submissionId: string) => {
     if (!workspaceId) return;
     try {
-      await apiClient.post(`/api/submissions/${submissionId}/approve`, { workspaceId });
+      await apiClient.post(`/submissions/${submissionId}/approve`, { workspaceId });
       setSubmissions(submissions.filter(s => s._id !== submissionId));
       setSelectedSubmission(null);
     } catch (error) {
@@ -239,7 +239,7 @@ export default function HRFormsPage() {
 
   const handleDeny = async (submissionId: string) => {
     try {
-      await apiClient.delete(`/api/submissions/${submissionId}/deny`);
+      await apiClient.delete(`/submissions/${submissionId}/deny`);
       setSubmissions(submissions.filter(s => s._id !== submissionId));
       setSelectedSubmission(null);
     } catch (error) {

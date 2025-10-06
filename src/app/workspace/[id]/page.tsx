@@ -87,7 +87,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
     if (!selectedWorkspace) return;
     
     try {
-      const response = await apiClient.get(`/api/workspaces/${selectedWorkspace._id}`);
+      const response = await apiClient.get(`/workspaces/${selectedWorkspace._id}`);
       setRows(response.data.table.rows || []);
       
       // Deduplicate schema by column name, keeping the first occurrence

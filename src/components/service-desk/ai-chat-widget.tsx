@@ -65,7 +65,7 @@ export function AiChatWidget() {
 
     try {
       const response = await apiClient.post(
-        `/api/ai/workspace/${selectedWorkspace._id}/ask`,
+        `/ai/workspace/${selectedWorkspace._id}/ask`,
         { question: message }
       )
       const aiMessage = { role: "ai" as const, text: response.data.response }

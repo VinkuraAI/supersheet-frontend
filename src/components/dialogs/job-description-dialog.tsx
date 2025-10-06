@@ -53,7 +53,7 @@ export function JobDescriptionDialog({
 
     setIsSaving(true);
     try {
-      await apiClient.put(`/api/workspaces/${workspaceId}`, {
+      await apiClient.put(`/workspaces/${workspaceId}`, {
         userId: user.id,
         jd: jd,
       });

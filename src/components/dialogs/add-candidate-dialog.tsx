@@ -113,7 +113,7 @@ export function AddCandidateDialog({
         setUploadFiles(prev => prev.map(f => ({ ...f, status: 'uploading', progress: 0 })));
 
         await apiClient.post(
-            `/api/workspaces/upload-resume/${workspaceId}`,
+            `/workspaces/upload-resume/${workspaceId}`,
             formData,
             {
                 headers: { "Content-Type": "multipart/form-data" },
