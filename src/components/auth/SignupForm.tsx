@@ -72,26 +72,38 @@ export default function SignupForm() {
 
     setIsLoading(true);
     try {
-      // Simulate API call
-      const signup = async (data: typeof formData) => {
-        try {
-          const res = await apiClient.post("/api/users/signup", data);
-          console.log(res.data.message);
-
-          route.push("/auth?login=true");
-        } catch (error) {
-          if(error instanceof AxiosError){
-            console.log(error.response?.data?.message || "Somthing went wrong");
-          }
-          else{
-            console.log(error);
-          }
-        }
-      };
-      signup(formData);
-      console.log("Signup data:", formData);
+      const res = await apiClient.post("/api/users/signup", formData);
+      console.log(res.data.message);
+      
+      // Clear form and redirect to login
+      setFormData({
+        userName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+      
+      // Redirect to login page
+      route.push("/auth?login=true");
     } catch (error) {
-      console.error("Signup error:", error);
+      if (error instanceof AxiosError) {
+        const errorMessage = error.response?.data?.message || "Something went wrong";
+        console.error("Signup error:", errorMessage);
+        
+        // Show error to user
+        setErrors({
+          ...errors,
+          email: error.response?.data?.message?.includes("exists") 
+            ? "This email is already registered" 
+            : errorMessage
+        });
+      } else {
+        console.error("Signup error:", error);
+        setErrors({
+          ...errors,
+          email: "An unexpected error occurred. Please try again."
+        });
+      }
     } finally {
       setIsLoading(false);
     }

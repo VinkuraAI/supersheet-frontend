@@ -9,13 +9,17 @@ import SignupForm from "../../components/auth/SignupForm";
 import LoginForm from "../../components/auth/LoginForm";
 
 function AuthPageComponent() {
-  const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(true); // Default to login form
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const login = searchParams.get('login')
+    const signup = searchParams.get('signup')
+    
     if (login === 'true') {
       setIsLogin(true)
+    } else if (signup === 'true') {
+      setIsLogin(false)
     }
   }, [searchParams])
 
