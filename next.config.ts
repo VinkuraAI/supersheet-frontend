@@ -4,13 +4,13 @@ const nextConfig: NextConfig = {
   /* config options here */
   eslint: {
     // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
+    // your project has ESLint error.
     ignoreDuringBuilds: true,
   },
   
   async rewrites() {
     // Only use rewrites in development
-    // In production, use NEXT_PUBLIC_API_BASE_URL directly
+    // In production, use NEXT_PUBLIC_API_BASE_URL directly 
     if (process.env.NODE_ENV === 'development') {
       return [
         {
