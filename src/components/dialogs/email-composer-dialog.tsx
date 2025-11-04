@@ -95,7 +95,7 @@ export function EmailComposerDialog({
       apiUrl = apiUrl.replace(/\/$/, ''); // Remove trailing slash if present
       
       const response = await fetch(
-        `${apiUrl}/send-status-email`,
+        `${apiUrl}/api/send-status-email`,
         {
           method: "POST",
           headers: {

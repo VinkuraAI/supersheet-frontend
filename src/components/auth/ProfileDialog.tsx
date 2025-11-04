@@ -55,7 +55,7 @@ export default function ProfileDialog() {
 
   const handleSaveName = async () => {
     try {
-      await apiClient.put("/users/me", { fullName: tempName })
+      await apiClient.put("/api/users/me", { fullName: tempName })
       refetch()
       setIsEditing(false)
       toast({
@@ -73,7 +73,7 @@ export default function ProfileDialog() {
 
   const handleLogout = async () => {
     try {
-      await apiClient.post("/users/logout", {})
+      await apiClient.post("/api/users/logout", {})
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -90,7 +90,7 @@ export default function ProfileDialog() {
 
   const handleDeleteAccount = async () => {
     try {
-      await apiClient.delete("/users/delete")
+      await apiClient.delete("/api/users/delete")
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted.",

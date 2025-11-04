@@ -89,7 +89,7 @@ function WorkspaceSetup() {
     };
 
     try {
-      const response = await apiClient.post('/workspaces', payload);
+      const response = await apiClient.post('/api/workspaces', payload);
       const newWorkspace = response.data;
       router.push(`/workspace/${newWorkspace._id}`);
     } catch (error) {

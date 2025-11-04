@@ -119,7 +119,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
     }
 
     try {
-      const response = await apiClient.post('/workspaces', payload)
+      const response = await apiClient.post('/api/workspaces', payload)
       const newWorkspace = response.data
       
       // Update workspace context

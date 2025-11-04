@@ -469,7 +469,7 @@ export function TicketsTable({
 
     try {
       // Send email first
-      await apiClient.post(`/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {});
+      await apiClient.post(`/api/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {});
       
       // Then update status
       const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Yes' };
@@ -663,7 +663,7 @@ export function TicketsTable({
     );
 
     try {
-      await apiClient.post(`/workspaces/${selectedWorkspace?._id}/sync`, {
+      await apiClient.post(`/api/workspaces/${selectedWorkspace?._id}/sync`, {
         added,
         updated,
         deleted,

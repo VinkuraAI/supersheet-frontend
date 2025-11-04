@@ -75,7 +75,7 @@ export default function SignupForm() {
       // Simulate API call
       const signup = async (data: typeof formData) => {
         try {
-          const res = await apiClient.post("/users/signup", data);
+          const res = await apiClient.post("/api/users/signup", data);
           console.log(res.data.message);
 
           route.push("/auth?login=true");

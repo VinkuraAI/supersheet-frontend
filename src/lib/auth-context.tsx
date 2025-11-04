@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await apiClient.post("/users/login", { email, password });
+      const response = await apiClient.post("/api/users/login", { email, password });
       if (response.data && response.data.user) {
         const backendUser = response.data.user;
         const appUser: User = {
