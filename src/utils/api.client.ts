@@ -1,17 +1,6 @@
 import axios from "axios";
-
-// Get base URL based on environment
-const getBaseURL = () => {
-    // In production, always use the full backend URL
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
-        return process.env.NEXT_PUBLIC_API_BASE_URL || 'https://supersheet-backend.onrender.com';
-    }
-    // In development, use the env variable or default to localhost
-    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
-};
-
 const apiClient = axios.create({
-    baseURL: getBaseURL(),
+    baseURL: "/api",
     withCredentials: true,
 })
 
