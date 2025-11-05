@@ -93,7 +93,7 @@ export function SideNav() {
     if (workspaceForms[workspaceId]) return; // Already fetched
 
     try {
-      const response = await apiClient.get(`/api/workspaces/${workspaceId}/forms`);
+      const response = await apiClient.get(`/workspaces/${workspaceId}/forms`);
       setWorkspaceForms(prev => ({
         ...prev,
         [workspaceId]: response.data || []
@@ -144,7 +144,7 @@ export function SideNav() {
     if (!editingWorkspaceId || !user) return
 
     try {
-      await apiClient.put(`/api/workspaces/${editingWorkspaceId}`, {
+      await apiClient.put(`/workspaces/${editingWorkspaceId}`, {
         name: newWorkspaceName,
         userId: user.id,
       })
@@ -175,7 +175,7 @@ export function SideNav() {
     if (!workspaceToDelete) return;
 
     try {
-      await apiClient.delete(`/api/workspaces/${workspaceToDelete._id}`);
+      await apiClient.delete(`/workspaces/${workspaceToDelete._id}`);
       const newWorkspaces = workspaces.filter((w) => w._id !== workspaceToDelete._id);
       setWorkspaces(newWorkspaces);
 
@@ -297,7 +297,7 @@ export function SideNav() {
                                         />
                                       </button>
                                       <a
-                                        href="#"
+                                        href={`/workspace/${workspace._id}`}
                                         onClick={(e) => handleWorkspaceClick(workspace, e)}
                                         className={cn(
                                           "flex-1 rounded-md px-2 py-1.5 hover:bg-muted",

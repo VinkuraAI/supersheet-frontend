@@ -215,7 +215,7 @@ export default function HRFormsPage() {
     };
 
     try {
-      const response = await apiClient.post("/api/forms", form);
+      const response = await apiClient.post("/forms", form);
       setFormId(response.data._id); // Save the new form ID
       setIsFormLocked(true)
       setIsBuilding(false)
@@ -229,7 +229,7 @@ export default function HRFormsPage() {
   const handleApprove = async (submissionId: string) => {
     if (!workspaceId) return;
     try {
-      await apiClient.post(`/api/submissions/${submissionId}/approve`, { workspaceId });
+      await apiClient.post(`/submissions/${submissionId}/approve`, { workspaceId });
       setSubmissions(submissions.filter(s => s._id !== submissionId));
       setSelectedSubmission(null);
     } catch (error) {

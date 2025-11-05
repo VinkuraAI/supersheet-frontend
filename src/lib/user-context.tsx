@@ -33,7 +33,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      const response = await apiClient.get('/api/users/me');
+      const response = await apiClient.get('/users/me');
       setUser(response.data);
     } catch (error: any) {
       console.error('Failed to fetch user data', error);
