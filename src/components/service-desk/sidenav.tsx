@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ChevronDown, Pencil, Trash2, Plus, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 import apiClient from "@/utils/api.client"
@@ -67,7 +67,6 @@ const initialSections = [
 ]
 
 export function SideNav() {
-  const router = useRouter();
   const { user } = useAuth();
   const { workspaces, setWorkspaces, selectedWorkspace, setSelectedWorkspace, isLoading } = useWorkspace();
   const [isWorkspacesOpen, setIsWorkspacesOpen] = useState(true)
@@ -120,15 +119,8 @@ export function SideNav() {
     setExpandedWorkspaces(newExpanded);
   };
 
-  const handleWorkspaceClick = (workspace: Workspace, e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleWorkspaceClick = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);
-  };
-
-  const handleFormClick = (workspaceId: string, formId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/workspace/${workspaceId}/forms`);
   };
 
   const toggleWorkspaces = () => {
@@ -296,16 +288,16 @@ export function SideNav() {
                                           )}
                                         />
                                       </button>
-                                      <a
+                                      <Link
                                         href={`/workspace/${workspace._id}`}
-                                        onClick={(e) => handleWorkspaceClick(workspace, e)}
+                                        onClick={() => handleWorkspaceClick(workspace)}
                                         className={cn(
-                                          "flex-1 rounded-md px-2 py-1.5 hover:bg-muted",
+                                          "flex-1 rounded-md px-2 py-1.5 hover:bg-muted block",
                                           selectedWorkspace?._id === workspace._id ? "bg-muted font-medium" : ""
                                         )}
                                       >
                                         {workspace.name}
-                                      </a>
+                                      </Link>
                                     </div>
                                   </ContextMenuTrigger>
                                   <ContextMenuContent>
@@ -334,15 +326,14 @@ export function SideNav() {
                                       </p>
                                     ) : workspaceForms[workspace._id].length > 0 ? (
                                       workspaceForms[workspace._id].map((form) => (
-                                        <a
+                                        <Link
                                           key={form._id}
-                                          href="#"
-                                          onClick={(e) => handleFormClick(workspace._id, form._id, e)}
+                                          href={`/workspace/${workspace._id}/forms`}
                                           className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted text-[0.65rem]"
                                         >
                                           <FileText className="h-3 w-3 text-muted-foreground" />
                                           {form.title}
-                                        </a>
+                                        </Link>
                                       ))
                                     ) : (
                                       <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
