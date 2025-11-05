@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -45,6 +46,7 @@ const getRandomColor = () => {
 }
 
 export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebarOpen }: TopBarProps) {
+  const router = useRouter()
   const { selectedWorkspace, isLoading: isWorkspaceLoading } = useWorkspace()
   const { user, isLoading: isUserLoading } = useUser()
   const [avatarColor, setAvatarColor] = useState("")
@@ -99,7 +101,7 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
       {/* Search */}
       <div className="ml-auto flex w-full max-w-[390px] items-center gap-1.5">
         <Input placeholder="Search" className="h-7 text-xs" aria-label="Search" />
-        <Button size="sm" className="h-7 px-2 text-xs" disabled={!selectedWorkspace}>
+        <Button size="sm" className="h-7 px-2 text-xs" onClick={() => router.push('/welcome?create=true')}>
           <Plus className="mr-1.5 size-3" />
           Create
         </Button>

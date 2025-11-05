@@ -170,13 +170,21 @@ const hrOptions = [
 ];
 
 import { useAuth } from "../../lib/auth-context";
+import { useSearchParams } from "next/navigation";
 
 export default function WelcomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<'welcome' | 'loading' | 'selection' | 'hr-options'>('welcome');
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [selectedHrOption, setSelectedHrOption] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setCurrentStep('selection');
+    }
+  }, [searchParams]);
 
   const handleGetStarted = () => {
     setCurrentStep('selection');

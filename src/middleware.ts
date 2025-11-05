@@ -12,6 +12,11 @@ export async function middleware(request: NextRequest) {
 
   // If the user is logged in and tries to access the welcome page
   if (pathname.startsWith('/welcome')) {
+    // If the user is trying to create a new workspace, let them through.
+    if (request.nextUrl.searchParams.get('create') === 'true') {
+      return NextResponse.next();
+    }
+
     try {
       // We must use the full backend URL here as this is a server-to-server request.
       // The /api proxy is for client-side requests only.
