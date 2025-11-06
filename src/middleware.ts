@@ -14,6 +14,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/welcome')) {
     // If the user is trying to create a new workspace, let them through.
     if (request.nextUrl.searchParams.get('create') === 'true') {
+      console.log("????")
       return NextResponse.next();
     }
 
@@ -31,7 +32,7 @@ export async function middleware(request: NextRequest) {
       if (response.ok) {
         const workspaces = await response.json();
         // If the user has one or more workspaces, redirect them to the main app.
-        if (workspaces && workspaces.length > 0) {
+        if (workspaces && workspaces.length > 1 ) {
           return NextResponse.redirect(new URL('/workspace', request.url));
         }
       }

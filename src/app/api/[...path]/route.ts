@@ -50,27 +50,40 @@ async function proxyRequest(
   const path = pathSegments.join('/');
   const url = `${BACKEND_URL}/${path}`;
   
-  // Get the request body if it exists
-  let body;
-  if (method !== 'GET' && method !== 'DELETE') {
-    try {
-      body = await request.json();
-    } catch {
-      // No body or invalid JSON
-    }
-  }
-
   // Forward cookies from the browser request to the backend
   const cookies = request.headers.get('cookie');
+  const contentType = request.headers.get('content-type');
+
+  // Handle multipart/form-data (file uploads)
+  const isMultipart = contentType?.includes('multipart/form-data');
+  
+  let body;
+  const headers: Record<string, string> = {
+    ...(cookies && { Cookie: cookies }),
+  };
+
+  if (method !== 'GET' && method !== 'DELETE') {
+    if (isMultipart) {
+      // For multipart/form-data, pass the FormData directly
+      body = await request.formData();
+      // Don't set Content-Type - let fetch set it with the boundary
+    } else {
+      // For JSON requests
+      try {
+        const jsonBody = await request.json();
+        body = JSON.stringify(jsonBody);
+        headers['Content-Type'] = 'application/json';
+      } catch {
+        // No body or invalid JSON
+      }
+    }
+  }
 
   try {
     const backendResponse = await fetch(url, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(cookies && { Cookie: cookies }),
-      },
-      body: body ? JSON.stringify(body) : undefined,
+      headers,
+      body: body as BodyInit | undefined,
       credentials: 'include',
     });
 

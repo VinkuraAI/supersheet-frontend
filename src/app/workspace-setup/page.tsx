@@ -1,21 +1,33 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Grid3x3, Upload, FileText, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import apiClient from "@/utils/api.client";
 import { useAuth } from "@/lib/auth-context";
+import { useWorkspace } from "@/lib/workspace-context";
 
 function WorkspaceSetup() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { canCreateWorkspace, maxWorkspaces } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<'workspace-name' | 'job-description'>('workspace-name');
   const [workspaceName, setWorkspaceName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState<'paste' | 'upload'>('paste');
+  const [isExtracting, setIsExtracting] = useState(false);
+
+  // Check workspace limit on mount
+  useEffect(() => {
+    if (!canCreateWorkspace) {
+      alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces. Please delete an existing workspace to create a new one.`);
+      router.push('/workspace');
+    }
+  }, [canCreateWorkspace, maxWorkspaces, router]);
 
   const handleWorkspaceSubmit = () => {
     if (workspaceName.trim() && workspaceName.length >= 3) {
@@ -33,7 +45,7 @@ function WorkspaceSetup() {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -42,6 +54,7 @@ function WorkspaceSetup() {
       const file = e.dataTransfer.files[0];
       if (file.type === 'text/plain' || file.type === 'application/pdf' || file.name.endsWith('.docx')) {
         setUploadedFile(file);
+        setActiveTab('upload');
         // Read file content if it's a text file
         if (file.type === 'text/plain') {
           const reader = new FileReader();
@@ -50,14 +63,20 @@ function WorkspaceSetup() {
           };
           reader.readAsText(file);
         }
+        // Extract text from PDF
+        else if (file.type === 'application/pdf') {
+          await extractTextFromPDF(file);
+        }
       }
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setUploadedFile(file);
+      setActiveTab('upload');
+      
       // Read file content if it's a text file
       if (file.type === 'text/plain') {
         const reader = new FileReader();
@@ -65,13 +84,48 @@ function WorkspaceSetup() {
           setJobDescription(e.target?.result as string);
         };
         reader.readAsText(file);
+      } 
+      // Extract text from PDF
+      else if (file.type === 'application/pdf') {
+        await extractTextFromPDF(file);
       }
+    }
+  };
+
+  const extractTextFromPDF = async (file: File) => {
+    setIsExtracting(true);
+    setActiveTab('upload');
+    try {
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      console.log('Uploading PDF:', file.name, file.type, file.size);
+
+      const response = await apiClient.post('/workspaces/extract-pdf', formData);
+
+      if (response.data && response.data.text) {
+        setJobDescription(response.data.text);
+      }
+    } catch (error) {
+      console.error('Error extracting text from PDF:', error);
+      const errorMessage = (error as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Failed to extract text from PDF. Please try again or paste the text manually.';
+      alert(errorMessage);
+      setUploadedFile(null);
+    } finally {
+      setIsExtracting(false);
     }
   };
 
   const handleFinalSubmit = async () => {
     if (!user) {
       console.error('No user found. Please log in.');
+      return;
+    }
+
+    // Double-check workspace limit before submission
+    if (!canCreateWorkspace) {
+      alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces.`);
+      router.push('/workspace');
       return;
     }
 
@@ -94,6 +148,9 @@ function WorkspaceSetup() {
       router.push(`/workspace/${newWorkspace._id}`);
     } catch (error) {
       console.error('Error creating workspace:', error);
+      // Show user-friendly error message
+      const errorMessage = (error as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Failed to create workspace. Please try again.';
+      alert(errorMessage);
     }
   };
 
@@ -353,10 +410,10 @@ function WorkspaceSetup() {
                 {/* Hover Inactive: Background #F8FAFC, Text #334155 */}
                 <button
                   onClick={() => {
+                    setActiveTab('paste');
                     setUploadedFile(null);
-                    setJobDescription('');
                   }}
-                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${!uploadedFile 
+                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${activeTab === 'paste'
                       ? 'border-blue-500 text-blue-600 bg-white shadow-sm' 
                       : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
@@ -365,7 +422,7 @@ function WorkspaceSetup() {
                     {/* Tab Icon: Inherits text color */}
                     <FileText className="w-5 h-5" />
                     <span>Paste Text</span>
-                    {!uploadedFile && jobDescription && (
+                    {activeTab === 'paste' && jobDescription && (
                       /* Active Indicator: Background #3B82F6, Text white */
                       <span className="ml-2 px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
                         Active
@@ -376,7 +433,11 @@ function WorkspaceSetup() {
                 
                 {/* Upload File Tab */}
                 <button
-                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${uploadedFile 
+                  onClick={() => {
+                    setActiveTab('upload');
+                    setJobDescription('');
+                  }}
+                  className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${activeTab === 'upload'
                       ? 'border-blue-500 text-blue-600 bg-white shadow-sm' 
                       : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
@@ -384,7 +445,7 @@ function WorkspaceSetup() {
                   <div className="flex items-center justify-center gap-2">
                     <Upload className="w-5 h-5" />
                     <span>Upload File</span>
-                    {uploadedFile && (
+                    {activeTab === 'upload' && uploadedFile && (
                       <span className="ml-2 px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
                         Active
                       </span>
@@ -396,7 +457,7 @@ function WorkspaceSetup() {
               {/* Tab Content */}
               <div className="p-6 sm:p-8">
                 {/* Text Area Section */}
-                {!uploadedFile && (
+                {activeTab === 'paste' && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -452,7 +513,7 @@ function WorkspaceSetup() {
                 )}
 
                 {/* File Upload Section */}
-                {!jobDescription && (
+                {activeTab === 'upload' && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -471,7 +532,25 @@ function WorkspaceSetup() {
                       onDragOver={handleDrag}
                       onDrop={handleDrop}
                     >
-                      {uploadedFile ? (
+                      {isExtracting ? (
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="space-y-4"
+                        >
+                          {/* Loading Icon Container */}
+                          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30">
+                            <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          </div>
+                          
+                          {/* Loading Message */}
+                          <p className="text-blue-600 font-semibold text-lg">Extracting text from PDF...</p>
+                          <p className="text-slate-600 text-sm">This may take a few moments</p>
+                        </motion.div>
+                      ) : uploadedFile ? (
                         <motion.div
                           initial={{ scale: 0.9, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
@@ -485,22 +564,36 @@ function WorkspaceSetup() {
                           </div>
                           
                           {/* Success Message: Green #059669 */}
-                          <p className="text-green-600 font-semibold text-lg">File uploaded successfully!</p>
+                          <p className="text-green-600 font-semibold text-lg">
+                            {uploadedFile?.type === 'application/pdf' ? 'Text extracted successfully!' : 'File uploaded successfully!'}
+                          </p>
+                          {uploadedFile?.type === 'application/pdf' && (
+                            <p className="text-slate-600 text-sm">Job description has been extracted from the PDF</p>
+                          )}
                           
                           {/* File Info Card: Background #F0FDF4, Border #BBF7D0 */}
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-md mx-auto">
                             <div className="flex items-center gap-3">
                               {/* File Icon: Green #059669 */}
                               <FileText className="w-6 h-6 text-green-600 flex-shrink-0" />
-                              <div className="flex-1 text-left">
-                                {/* Filename: Dark green #065F46 */}
-                                <p className="text-sm font-medium text-green-800 truncate">{uploadedFile?.name}</p>
+                              <div className="flex-1 text-left min-w-0">
+                                {/* Filename: Dark green #065F46 - truncate with ellipsis */}
+                                <p className="text-sm font-medium text-green-800 truncate" title={uploadedFile?.name}>
+                                  {uploadedFile?.name}
+                                </p>
                                 {/* File Size: Medium green #059669 */}
                                 <p className="text-xs text-green-600">
                                   {uploadedFile ? (uploadedFile.size / 1024).toFixed(2) : '0'} KB
                                 </p>
                               </div>
                             </div>
+                            {jobDescription && (
+                              <div className="mt-3 pt-3 border-t border-green-200">
+                                <p className="text-xs text-green-700 font-medium">
+                                  {jobDescription.length} characters extracted
+                                </p>
+                              </div>
+                            )}
                           </div>
                           
                           {/* Remove Button */}

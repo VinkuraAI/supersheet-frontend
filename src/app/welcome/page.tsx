@@ -171,21 +171,30 @@ const hrOptions = [
 
 import { useAuth } from "../../lib/auth-context";
 import { useSearchParams } from "next/navigation";
+import { useWorkspace } from "../../lib/workspace-context";
 
 // Component that uses useSearchParams - must be wrapped in Suspense
 function WelcomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<'welcome' | 'loading' | 'selection' | 'hr-options'>('welcome');
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [selectedHrOption, setSelectedHrOption] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get('create') === 'true') {
+      // Check workspace limit before allowing creation
+      if (!canCreateWorkspace) {
+        alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces. Please delete an existing workspace to create a new one.`);
+        router.push('/workspace');
+        return;
+      }
+      console.log("ho gaya set ");
       setCurrentStep('selection');
     }
-  }, [searchParams]);
+  }, [searchParams, canCreateWorkspace, maxWorkspaces, router]);
 
   const handleGetStarted = () => {
     setCurrentStep('selection');
