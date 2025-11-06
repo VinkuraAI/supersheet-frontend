@@ -105,7 +105,7 @@ function FeedbackCell({ aiScore }: { aiScore: number }) {
   const feedback = getFeedbackFromScore(aiScore || 0);
   
   return (
-    <div className={`px-2 py-1 rounded border text-xs font-medium ${feedback.color}`}>
+    <div className={`px-2 py-1 rounded border text-xs font-medium whitespace-normal break-words ${feedback.color}`}>
       {feedback.text}
     </div>
   );
@@ -383,15 +383,23 @@ export function TicketsTable({
     schema.forEach(col => {
       // Set different default widths based on column type
       if (col.name === "Feedback") {
-        initialWidths[col.name] = 200; // Wider for feedback text
+        initialWidths[col.name] = 270; // Wider for feedback text
       } else if (col.name === "Status") {
-        initialWidths[col.name] = 120; // Wider for status dropdown
+        initialWidths[col.name] = 140; // Wider for status dropdown
       } else if (col.name === "Informed") {
-        initialWidths[col.name] = 120; // Wider for informed dropdown
+        initialWidths[col.name] = 140; // Wider for informed dropdown
       } else if (col.name === "Notes") {
-        initialWidths[col.name] = 150; // Wider for notes
+        initialWidths[col.name] = 220; // Wider for notes
+      } else if (col.name === "Name" || col.name === "Email") {
+        initialWidths[col.name] = 160; // Wider for name and email
+      } else if (col.name === "Phone" || col.name === "Location") {
+        initialWidths[col.name] = 140; // Medium width
+      } else if (col.name === "AI Score" || col.name === "Experience") {
+        initialWidths[col.name] = 50; // Very compact for numeric values
+      } else if (col.name === "Skills" || col.name === "Education") {
+        initialWidths[col.name] = 180; // Medium-wide for skills/education
       } else {
-        initialWidths[col.name] = 90; // Default width reduced by 25%
+        initialWidths[col.name] = 130; // Default width
       }
     });
     setColumnWidths(initialWidths);
@@ -807,7 +815,8 @@ export function TicketsTable({
           <Table 
             style={{ 
               tableLayout: 'fixed',
-              width: Object.values(columnWidths).reduce((sum, width) => sum + width, 0) + 'px'
+              width: '100%',
+              minWidth: Object.values(columnWidths).reduce((sum, width) => sum + width, 0) + 'px'
             }}
           >
           <TableHeader>
@@ -897,7 +906,7 @@ export function TicketsTable({
 
 <TableCell
                       key={`${col.name}-${colIndex}`}
-                      className="border-r bg-background overflow-hidden whitespace-nowrap"
+                      className={`border-r bg-background ${col.name === "Feedback" ? "overflow-visible" : "overflow-hidden whitespace-nowrap"}`}
                       style={{
                         width: columnWidths[col.name],
                         minWidth: columnWidths[col.name],

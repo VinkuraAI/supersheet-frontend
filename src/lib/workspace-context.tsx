@@ -16,6 +16,9 @@ interface WorkspaceContextType {
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
   isLoading: boolean;
+  canCreateWorkspace: boolean;
+  workspaceCount: number;
+  maxWorkspaces: number;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -49,17 +52,31 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           const found = response.data.find(w => w._id === workspaceIdFromUrl);
           setSelectedWorkspaceState(found || null);
         } else {
-          const lastSelectedId = localStorage.getItem("selectedWorkspaceId");
-          if (lastSelectedId) {
-            const found = response.data.find(w => w._id === lastSelectedId);
-            if (found) {
-              router.push(`/workspace/${found._id}`);
+          // Don't auto-redirect if user is on welcome page trying to create a workspace
+          const isCreatingWorkspace = pathname === '/welcome' && 
+            typeof window !== 'undefined' && 
+            new URLSearchParams(window.location.search).get('create') === 'true';
+          
+          // Don't auto-redirect if user is on workspace-setup page (actively creating a workspace)
+          const isOnWorkspaceSetup = pathname === '/workspace-setup';
+          
+          if (!isCreatingWorkspace && !isOnWorkspaceSetup) {
+            const lastSelectedId = localStorage.getItem("selectedWorkspaceId");
+            if (lastSelectedId) {
+              const found = response.data.find(w => w._id === lastSelectedId);
+              if (found) {
+                router.push(`/workspace/${found._id}`);
+              }
             }
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Handle 401 Unauthorized - user needs to log in
-        if (error.response?.status === 401) {
+        const isAuthError = error && typeof error === 'object' && 'response' in error && 
+          error.response && typeof error.response === 'object' && 'status' in error.response && 
+          error.response.status === 401;
+        
+        if (isAuthError) {
           // User is not authenticated, silently handle it
           localStorage.removeItem("user");
           setWorkspaces([]);
@@ -89,8 +106,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const maxWorkspaces = 2;
+  const workspaceCount = workspaces.length;
+  const canCreateWorkspace = workspaceCount < maxWorkspaces;
+
   return (
-    <WorkspaceContext.Provider value={{ workspaces, setWorkspaces, selectedWorkspace, setSelectedWorkspace, isLoading }}>
+    <WorkspaceContext.Provider value={{ 
+      workspaces, 
+      setWorkspaces, 
+      selectedWorkspace, 
+      setSelectedWorkspace, 
+      isLoading,
+      canCreateWorkspace,
+      workspaceCount,
+      maxWorkspaces
+    }}>
       {children}
     </WorkspaceContext.Provider>
   );

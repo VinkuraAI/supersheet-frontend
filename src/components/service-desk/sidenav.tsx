@@ -68,7 +68,7 @@ const initialSections = [
 
 export function SideNav() {
   const { user } = useAuth();
-  const { workspaces, setWorkspaces, selectedWorkspace, setSelectedWorkspace, isLoading } = useWorkspace();
+  const { workspaces, setWorkspaces, selectedWorkspace, setSelectedWorkspace, isLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
   const [isWorkspacesOpen, setIsWorkspacesOpen] = useState(true)
   const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(new Set())
   const [workspaceForms, setWorkspaceForms] = useState<Record<string, WorkspaceForm[]>>({})
@@ -217,10 +217,14 @@ export function SideNav() {
                 <li key={item.label}>
                   {item.action === "create-workspace" ? (
                     <button
-                      onClick={() => setShowCreateWorkspaceDialog(true)}
+                      onClick={() => canCreateWorkspace && setShowCreateWorkspaceDialog(true)}
+                      disabled={!canCreateWorkspace}
+                      title={!canCreateWorkspace ? `Workspace limit reached (${workspaceCount}/${maxWorkspaces})` : 'Create new workspace'}
                       className={cn(
-                        "w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted text-left transition-colors",
-                        "hover:bg-blue-50 hover:text-blue-700 font-medium"
+                        "w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors",
+                        canCreateWorkspace 
+                          ? "hover:bg-blue-50 hover:text-blue-700 font-medium cursor-pointer" 
+                          : "opacity-50 cursor-not-allowed"
                       )}
                     >
                       <Plus className="h-3 w-3" />

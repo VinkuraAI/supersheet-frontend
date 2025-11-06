@@ -47,7 +47,7 @@ const getRandomColor = () => {
 
 export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebarOpen }: TopBarProps) {
   const router = useRouter()
-  const { selectedWorkspace, isLoading: isWorkspaceLoading } = useWorkspace()
+  const { selectedWorkspace, isLoading: isWorkspaceLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace()
   const { user, isLoading: isUserLoading } = useUser()
   const [avatarColor, setAvatarColor] = useState("")
 
@@ -101,7 +101,17 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
       {/* Search */}
       <div className="ml-auto flex w-full max-w-[390px] items-center gap-1.5">
         <Input placeholder="Search" className="h-7 text-xs" aria-label="Search" />
-        <Button size="sm" className="h-7 px-2 text-xs" onClick={() => router.push('/welcome?create=true')}>
+        <Button 
+          size="sm" 
+          className="h-7 px-2 text-xs" 
+          onClick={() => {
+            if (canCreateWorkspace) {
+              router.push('/welcome?create=true')
+            }
+          }}
+          disabled={!canCreateWorkspace}
+          title={!canCreateWorkspace ? `Workspace limit reached (${workspaceCount}/${maxWorkspaces})` : 'Create new workspace'}
+        >
           <Plus className="mr-1.5 size-3" />
           Create
         </Button>
