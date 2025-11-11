@@ -188,7 +188,7 @@ function WelcomePageContent() {
       // Check workspace limit before allowing creation
       if (!canCreateWorkspace) {
         alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces. Please delete an existing workspace to create a new one.`);
-        router.push('/workspace');
+        router.push('/dashboard');
         return;
       }
       console.log("ho gaya set ");

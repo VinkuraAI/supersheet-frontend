@@ -43,30 +43,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }
 
         const response = await apiClient.get<Workspace[]>("/workspaces");
-        setWorkspaces(response.data);
+        const fetchedWorkspaces = response.data;
+        setWorkspaces(fetchedWorkspaces);
 
         const pathSegments = pathname.split('/');
-        const workspaceIdFromUrl = pathSegments.length > 2 ? pathSegments[2] : null;
+        const workspaceIdFromUrl = pathSegments.length > 2 && pathSegments[1] === 'workspace' ? pathSegments[2] : null;
 
         if (workspaceIdFromUrl) {
-          const found = response.data.find(w => w._id === workspaceIdFromUrl);
+          const found = fetchedWorkspaces.find(w => w._id === workspaceIdFromUrl);
           setSelectedWorkspaceState(found || null);
         } else {
-          // Don't auto-redirect if user is on welcome page trying to create a workspace
-          const isCreatingWorkspace = pathname === '/welcome' && 
-            typeof window !== 'undefined' && 
-            new URLSearchParams(window.location.search).get('create') === 'true';
-          
-          // Don't auto-redirect if user is on workspace-setup page (actively creating a workspace)
-          const isOnWorkspaceSetup = pathname === '/workspace-setup';
-          
-          if (!isCreatingWorkspace && !isOnWorkspaceSetup) {
-            const lastSelectedId = localStorage.getItem("selectedWorkspaceId");
-            if (lastSelectedId) {
-              const found = response.data.find(w => w._id === lastSelectedId);
-              if (found) {
-                router.push(`/workspace/${found._id}`);
-              }
+          const isAuthPage = pathname.startsWith('/auth');
+          const isWelcomePage = pathname === '/welcome';
+          const isWorkspaceSetupPage = pathname === '/workspace-setup';
+          const isDashboardPage = pathname === '/dashboard';
+          const isRootPage = pathname === '/';
+
+          if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isDashboardPage && !isRootPage) {
+            if (fetchedWorkspaces.length > 0) {
+              router.push('/dashboard');
+            } else {
+              router.push('/welcome');
             }
           }
         }
