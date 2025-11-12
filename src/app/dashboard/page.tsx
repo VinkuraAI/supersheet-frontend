@@ -247,12 +247,7 @@ function DashboardPage() {
   useEffect(() => {
     console.log("DashboardPage useEffect - workspaces.length:", workspaces.length, "isLoading:", isLoading, "hasChecked:", hasCheckedRef.current);
     
-    // Only redirect if:
-    // 1. We haven't checked yet
-    // 2. Loading is complete
-    // 3. There are actually no workspaces
     if (!hasCheckedRef.current && !isLoading) {
-      // Add a small delay to ensure workspace context has fully populated
       const timer = setTimeout(() => {
         hasCheckedRef.current = true;
         
@@ -262,7 +257,7 @@ function DashboardPage() {
         } else {
           console.log("Found", workspaces.length, "workspace(s), staying on dashboard");
         }
-      }, 100); // Small delay to let state settle
+      }, 100);
       
       return () => clearTimeout(timer);
     }
