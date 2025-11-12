@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { 
@@ -242,12 +242,31 @@ const CreateWorkspaceCard = ({ canCreate }: { canCreate: boolean }) => {
 function DashboardPage() {
   const { workspaces, isLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
   const router = useRouter();
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && workspaces.length === 0) {
-      router.push('/welcome');
+    console.log("DashboardPage useEffect - workspaces.length:", workspaces.length, "isLoading:", isLoading, "hasChecked:", hasCheckedRef.current);
+    
+    // Only redirect if:
+    // 1. We haven't checked yet
+    // 2. Loading is complete
+    // 3. There are actually no workspaces
+    if (!hasCheckedRef.current && !isLoading) {
+      // Add a small delay to ensure workspace context has fully populated
+      const timer = setTimeout(() => {
+        hasCheckedRef.current = true;
+        
+        if (workspaces.length === 0) {
+          console.log("No workspaces found after delay, redirecting to /welcome");
+          router.push('/welcome');
+        } else {
+          console.log("Found", workspaces.length, "workspace(s), staying on dashboard");
+        }
+      }, 100); // Small delay to let state settle
+      
+      return () => clearTimeout(timer);
     }
-  }, [isLoading, workspaces, router]);
+  }, [isLoading, workspaces.length, router, workspaces]);
 
   if (isLoading) {
     return (
