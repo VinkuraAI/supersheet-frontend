@@ -21,6 +21,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -879,30 +887,31 @@ export function TicketsTable({
               </TableRow>
             ) : (
               currentData.map((row, rowIndex) => (
-                <TableRow
-                  key={row._id || rowIndex}
-                  className="hover:bg-primary/5"
-                >
-                  <TableCell
-                    className="border-r bg-muted/30 cursor-pointer"
-                    style={{ 
-                      width: columnWidths.checkbox,
-                      minWidth: columnWidths.checkbox,
-                      maxWidth: columnWidths.checkbox,
-                    }}
-                    onClick={() =>
-                      handleRowSelect(rowIndex, !selectedRows.has(rowIndex))
-                    }
-                  >
-                    <Checkbox
-                      aria-label={`Select row ${rowIndex}`}
-                      checked={selectedRows.has(rowIndex)}
-                      onCheckedChange={(checked) =>
-                        handleRowSelect(rowIndex, checked === true)
-                      }
-                    />
-                  </TableCell>
-                  {schema.map((col, colIndex) => (
+                <ContextMenu key={row._id || rowIndex}>
+                  <ContextMenuTrigger asChild>
+                    <TableRow
+                      className="hover:bg-primary/5 cursor-pointer"
+                    >
+                      <TableCell
+                        className="border-r bg-muted/30 cursor-pointer"
+                        style={{ 
+                          width: columnWidths.checkbox,
+                          minWidth: columnWidths.checkbox,
+                          maxWidth: columnWidths.checkbox,
+                        }}
+                        onClick={() =>
+                          handleRowSelect(rowIndex, !selectedRows.has(rowIndex))
+                        }
+                      >
+                        <Checkbox
+                          aria-label={`Select row ${rowIndex}`}
+                          checked={selectedRows.has(rowIndex)}
+                          onCheckedChange={(checked) =>
+                            handleRowSelect(rowIndex, checked === true)
+                          }
+                        />
+                      </TableCell>
+                      {schema.map((col, colIndex) => (
 
 <TableCell
                       key={`${col.name}-${colIndex}`}
@@ -951,7 +960,33 @@ export function TicketsTable({
                       )}
                     </TableCell>
                   ))}
-                </TableRow>
+                    </TableRow>
+                  </ContextMenuTrigger>
+                  
+                  {/* Context Menu Content */}
+                  <ContextMenuContent className="w-56">
+                    <ContextMenuLabel className="font-semibold text-blue-600">
+                      Change Status
+                    </ContextMenuLabel>
+                    <ContextMenuSeparator />
+                    
+                    {STATUS_OPTIONS.map((status) => (
+                      <ContextMenuItem
+                        key={status.value}
+                        onClick={() => handleStatusChange(rowIndex, status.value)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 w-full">
+                          <div className={`w-3 h-3 rounded-full ${status.color.split(' ')[0].replace('bg-', 'bg-')}`} />
+                          <span className="flex-1">{status.value}</span>
+                          {row.data.Status === status.value && (
+                            <div className="text-blue-600">✓</div>
+                          )}
+                        </div>
+                      </ContextMenuItem>
+                    ))}
+                  </ContextMenuContent>
+                </ContextMenu>
               ))
             )}
           </TableBody>

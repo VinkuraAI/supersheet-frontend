@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input"
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
+  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Bell, HelpCircle, Plus, Menu } from "lucide-react"
+import { Bell, HelpCircle, Plus, Menu, Home, ChevronRight } from "lucide-react"
 import { useWorkspace } from "@/lib/workspace-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -79,20 +81,47 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
       {/* App launcher / logo placeholder */}
       <div className="h-6 w-6 rounded bg-muted" aria-hidden />
 
-      {/* Breadcrumbs */}
-      <div className="hidden min-w-0 md:block">
+      {/* Breadcrumbs - File Path Style */}
+      <div className="hidden min-w-0 md:flex items-center">
         <Breadcrumb>
-          <BreadcrumbList className="text-xs">
+          <BreadcrumbList className="text-sm font-mono">
             {isWorkspaceLoading ? (
-              <Skeleton className="h-4 w-24" />
-            ) : selectedWorkspace ? (
-              <BreadcrumbItem>
-                <BreadcrumbPage>{selectedWorkspace.name}</BreadcrumbPage>
-              </BreadcrumbItem>
+              <Skeleton className="h-5 w-32" />
             ) : (
-              <BreadcrumbItem>
-                <BreadcrumbPage>No workspace selected</BreadcrumbPage>
-              </BreadcrumbItem>
+              <>
+                {/* Home/Dashboard Link */}
+                <BreadcrumbItem>
+                  <BreadcrumbLink 
+                    onClick={() => router.push('/dashboard')}
+                    className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer group"
+                  >
+                    <Home className="w-5.5 h-5.5" />
+                    <span className="relative">
+                      home
+                      <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
+                    </span>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                
+                {/* Separator */}
+                <BreadcrumbSeparator>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </BreadcrumbSeparator>
+                
+                {/* Workspace Name */}
+                <BreadcrumbItem>
+                  {selectedWorkspace ? (
+                    <BreadcrumbPage className="font-semibold text-foreground flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse" />
+                      {selectedWorkspace.name}
+                    </BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbPage className="text-muted-foreground italic">
+                      No workspace selected
+                    </BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+              </>
             )}
           </BreadcrumbList>
         </Breadcrumb>
