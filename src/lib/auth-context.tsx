@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const appUser: User = {
           id: backendUser.id,
           email: backendUser.email,
-          name: backendUser.user_metadata.name,
+          name: backendUser.name,
         };
         localStorage.setItem("user", JSON.stringify(appUser));
         setUser(appUser);

@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
     try {
       // We must use the full backend URL here as this is a server-to-server request.
       // The /api proxy is for client-side requests only.
-      const backendUrl = 'https://supersheet-backend.onrender.com/workspaces';
+      const backendUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/workspaces`;
       
       const response = await fetch(backendUrl, {
         headers: {
