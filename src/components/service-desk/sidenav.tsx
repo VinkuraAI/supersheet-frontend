@@ -369,6 +369,14 @@ export function SideNav() {
                                       Add Form
                                     </ContextMenuItem>
                                     <ContextMenuItem
+                                      onClick={() => {
+                                        window.location.href = `/workspace/${workspace._id}/documents`;
+                                      }}
+                                    >
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      Documents
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
                                       onClick={() =>
                                         handleRenameClick(workspace)
                                       }
