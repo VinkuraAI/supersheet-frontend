@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function LoginForm() {
   const { login, isLoading } = useAuth();
@@ -62,7 +62,15 @@ export default function LoginForm() {
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";
-      setErrors({ general: message });
+      
+      // Check if it's an invalid credentials error
+      if (message.toLowerCase().includes('invalid credentials') || 
+          message.toLowerCase().includes('incorrect password') ||
+          message.toLowerCase().includes('wrong password')) {
+        setErrors({ password: "The email or password you entered is incorrect" });
+      } else {
+        setErrors({ general: message });
+      }
     }
   };
 
@@ -115,9 +123,14 @@ export default function LoginForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Error Message */}
         {errors.general && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
-            {errors.general}
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 flex items-start gap-2"
+          >
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <span>{errors.general}</span>
+          </motion.div>
         )}
 
         {/* Email Field */}
@@ -126,13 +139,17 @@ export default function LoginForm() {
             Email Address
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${errors.email ? 'text-red-400' : 'text-gray-400'}`} />
             <input
               name="email"
               type="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-500"
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all placeholder:text-gray-500 ${
+                errors.email 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+              }`}
               placeholder="Enter your email address"
             />
           </div>
@@ -140,8 +157,9 @@ export default function LoginForm() {
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 text-sm mt-1"
+              className="text-red-600 text-sm mt-1.5 flex items-center gap-1"
             >
+              <AlertCircle className="w-4 h-4" />
               {errors.email}
             </motion.p>
           )}
@@ -158,19 +176,23 @@ export default function LoginForm() {
             </a>
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${errors.password ? 'text-red-400' : 'text-gray-400'}`} />
             <input
               name="password"
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-500"
+              className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 outline-none transition-all placeholder:text-gray-500 ${
+                errors.password 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+              }`}
               placeholder="Enter your password"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className={`absolute right-3 top-1/2 transform -translate-y-1/2 hover:text-gray-600 ${errors.password ? 'text-red-400' : 'text-gray-400'}`}
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
@@ -179,8 +201,9 @@ export default function LoginForm() {
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 text-sm mt-1"
+              className="text-red-600 text-sm mt-1.5 flex items-center gap-1"
             >
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {errors.password}
             </motion.p>
           )}
