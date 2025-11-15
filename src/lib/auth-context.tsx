@@ -57,7 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
         // Re-throw the error to be caught in the form
         if (err instanceof AxiosError && err.response) {
-            throw new Error(err.response.data.message || "An unknown error occurred");
+            // Check for both 'error' and 'message' fields in response
+            const errorMessage = err.response.data.error || err.response.data.message || "An unknown error occurred";
+            throw new Error(errorMessage);
         }
         throw err;
     } finally {

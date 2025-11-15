@@ -1,13 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Eye, EyeOff, Mail, User, Lock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Eye, EyeOff, Mail, User, Lock, AlertCircle, X, CheckCircle } from "lucide-react";
 import apiClient from "@/utils/api.client";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
+
+// Define type for backend validation errors
+interface ValidationError {
+  type: string;
+  value: string;
+  msg: string;
+  path: string;
+  location: string;
+}
+
 export default function SignupForm() {
   const [formData, setFormData] = useState({
+    name: "",
     userName: "",
     email: "",
     password: "",
@@ -17,6 +28,8 @@ export default function SignupForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -25,10 +38,24 @@ export default function SignupForm() {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+    // Clear general error when user starts typing
+    if (generalError) {
+      setGeneralError("");
+    }
+    // Clear success message when user starts typing
+    if (successMessage) {
+      setSuccessMessage("");
+    }
   };
   
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (formData.name.trim().length < 3) {
+      newErrors.name = "Name must be at least 3 characters";
+    }
     
     if (!formData.userName.trim()) {
       newErrors.userName = "User name is required";
@@ -71,38 +98,104 @@ export default function SignupForm() {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({});
+    setGeneralError("");
+    setSuccessMessage("");
+    
     try {
-      const res = await apiClient.post("/users/signup", formData);
-      console.log(res.data.message);
+      const res = await apiClient.post("/users/signup", {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
       
-      // Clear form and redirect to login
+      // Show success message
+      const message = res.data.message || "Account created successfully!";
+      setSuccessMessage(message);
+      
+      // Clear form
       setFormData({
+        name: "",
         userName: "",
         email: "",
         password: "",
         confirmPassword: "",
       });
       
-      // Redirect to login page
-      route.push("/auth?login=true");
+      // Redirect to login page after 2 seconds
+      setTimeout(() => {
+        route.push("/auth?login=true");
+      }, 2000);
     } catch (error) {
       if (error instanceof AxiosError) {
-        const errorMessage = error.response?.data?.message || "Something went wrong";
-        console.error("Signup error:", errorMessage);
+        const responseData = error.response?.data;
         
-        // Show error to user
-        setErrors({
-          ...errors,
-          email: error.response?.data?.message?.includes("exists") 
-            ? "This email is already registered" 
-            : errorMessage
-        });
+        // Check if backend returned validation errors array (from express-validator)
+        if (responseData?.errors && Array.isArray(responseData.errors)) {
+          const newErrors: Record<string, string> = {};
+          
+          // Map backend errors to form fields
+          responseData.errors.forEach((err: ValidationError) => {
+            const fieldName = err.path;
+            const errorMessage = err.msg;
+            
+            // Map 'name' field from backend to 'userName' in frontend
+            if (fieldName === 'name') {
+              newErrors.userName = errorMessage;
+            } else if (fieldName === 'email') {
+              newErrors.email = errorMessage;
+            } else if (fieldName === 'password') {
+              newErrors.password = errorMessage;
+            } else {
+              // For any other errors, add to general error
+              if (!newErrors.general) {
+                newErrors.general = errorMessage;
+              }
+            }
+          });
+          
+          setErrors(newErrors);
+          
+          // If there's a general error, set it
+          if (newErrors.general) {
+            setGeneralError(newErrors.general);
+          }
+        } 
+        // Check if backend returned a single error object with "error" property
+        else if (responseData?.error) {
+          const errorMessage = responseData.error;
+          
+          // Check if it's an email-related error
+          if (errorMessage.toLowerCase().includes("email")) {
+            setErrors({ email: errorMessage });
+          } else if (errorMessage.toLowerCase().includes("password")) {
+            setErrors({ password: errorMessage });
+          } else if (errorMessage.toLowerCase().includes("name")) {
+            setErrors({ userName: errorMessage });
+          } else {
+            // Show as general error if we can't map it to a specific field
+            setGeneralError(errorMessage);
+          }
+        }
+        // Check if backend returned "message" property
+        else if (responseData?.message) {
+          const errorMessage = responseData.message;
+          
+          if (errorMessage.toLowerCase().includes("email") && errorMessage.toLowerCase().includes("exist")) {
+            setErrors({ email: "This email is already registered" });
+          } else if (errorMessage.toLowerCase().includes("email")) {
+            setErrors({ email: errorMessage });
+          } else {
+            setGeneralError(errorMessage);
+          }
+        } 
+        // Fallback for unknown error structure
+        else {
+          setGeneralError("Something went wrong. Please try again.");
+        }
       } else {
         console.error("Signup error:", error);
-        setErrors({
-          ...errors,
-          email: "An unexpected error occurred. Please try again."
-        });
+        setGeneralError("An unexpected error occurred. Please try again.");
       }
     } finally {
       setIsLoading(false);
@@ -123,6 +216,85 @@ export default function SignupForm() {
           Join thousands of users already using Supersheet
         </p>
       </div>
+
+      {/* General Error Banner */}
+      <AnimatePresence>
+        {generalError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="relative bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg p-4 shadow-lg"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shadow-md">
+                  <AlertCircle className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-red-800 mb-1">
+                  Error Creating Account
+                </h3>
+                <p className="text-sm text-red-700 leading-relaxed">
+                  {generalError}
+                </p>
+              </div>
+              <button
+                onClick={() => setGeneralError("")}
+                className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+                aria-label="Dismiss error"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Message Banner */}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="relative bg-gradient-to-r from-green-50 to-emerald-100 border-l-4 border-green-500 rounded-lg p-4 shadow-lg"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-green-800 mb-1">
+                  Account Created Successfully! 🎉
+                </h3>
+                <p className="text-sm text-green-700 leading-relaxed">
+                  {successMessage}
+                </p>
+                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Redirecting to login page...
+                </p>
+              </div>
+              <button
+                onClick={() => setSuccessMessage("")}
+                className="flex-shrink-0 text-green-400 hover:text-green-600 transition-colors"
+                aria-label="Dismiss success message"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Google Sign Up Button */}
       <button
@@ -164,29 +336,89 @@ export default function SignupForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Fields */}
         <div className="grid grid-cols-2 gap-4">
+          {/* Full Name Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Full Name
+            </label>
+            <div className="relative">
+              <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
+                errors.name ? 'text-red-500' : 'text-gray-400'
+              }`} />
+              <input
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={handleInputChange}
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg outline-none transition-all placeholder:text-gray-500 ${
+                  errors.name 
+                    ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                }`}
+                placeholder="Enter your full name"
+              />
+              {errors.name && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                </div>
+              )}
+            </div>
+            {errors.name && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-1.5 mt-2 text-red-600"
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="w-1 h-1 rounded-full bg-red-500" />
+                </div>
+                <p className="text-sm font-medium leading-tight">
+                  {errors.name}
+                </p>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Username Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               User Name
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
+                errors.userName ? 'text-red-500' : 'text-gray-400'
+              }`} />
               <input
                 name="userName"
                 type="text"
                 value={formData.userName}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-500"
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg outline-none transition-all placeholder:text-gray-500 ${
+                  errors.userName 
+                    ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                }`}
                 placeholder="Enter your user name"
               />
+              {errors.userName && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                </div>
+              )}
             </div>
             {errors.userName && (
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-500 text-sm mt-1"
+                className="flex items-start gap-1.5 mt-2 text-red-600"
               >
-                {errors.userName}
-              </motion.p>
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="w-1 h-1 rounded-full bg-red-500" />
+                </div>
+                <p className="text-sm font-medium leading-tight">
+                  {errors.userName}
+                </p>
+              </motion.div>
             )}
           </div>
 
@@ -198,24 +430,40 @@ export default function SignupForm() {
             Email Address
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
+              errors.email ? 'text-red-500' : 'text-gray-400'
+            }`} />
             <input
               name="email"
               type="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-500"
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg outline-none transition-all placeholder:text-gray-500 ${
+                errors.email 
+                  ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              }`}
               placeholder="Enter your email address"
             />
+            {errors.email && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+              </div>
+            )}
           </div>
           {errors.email && (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 text-sm mt-1"
+              className="flex items-start gap-1.5 mt-2 text-red-600"
             >
-              {errors.email}
-            </motion.p>
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-1 h-1 rounded-full bg-red-500" />
+              </div>
+              <p className="text-sm font-medium leading-tight">
+                {errors.email}
+              </p>
+            </motion.div>
           )}
         </div>
 
@@ -225,13 +473,19 @@ export default function SignupForm() {
             Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
+              errors.password ? 'text-red-500' : 'text-gray-400'
+            }`} />
             <input
               name="password"
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-500"
+              className={`w-full pl-10 pr-12 py-3 border rounded-lg outline-none transition-all placeholder:text-gray-500 ${
+                errors.password 
+                  ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              }`}
               placeholder="Create a strong password"
             />
             <button
@@ -247,13 +501,18 @@ export default function SignupForm() {
             </button>
           </div>
           {errors.password && (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 text-sm mt-1"
+              className="flex items-start gap-1.5 mt-2 text-red-600"
             >
-              {errors.password}
-            </motion.p>
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-1 h-1 rounded-full bg-red-500" />
+              </div>
+              <p className="text-sm font-medium leading-tight">
+                {errors.password}
+              </p>
+            </motion.div>
           )}
         </div>
 
@@ -263,13 +522,19 @@ export default function SignupForm() {
             Confirm Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
+              errors.confirmPassword ? 'text-red-500' : 'text-gray-400'
+            }`} />
             <input
               name="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-500"
+              className={`w-full pl-10 pr-12 py-3 border rounded-lg outline-none transition-all placeholder:text-gray-500 ${
+                errors.confirmPassword 
+                  ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+              }`}
               placeholder="Confirm your password"
             />
             <button
@@ -285,13 +550,18 @@ export default function SignupForm() {
             </button>
           </div>
           {errors.confirmPassword && (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 text-sm mt-1"
+              className="flex items-start gap-1.5 mt-2 text-red-600"
             >
-              {errors.confirmPassword}
-            </motion.p>
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-1 h-1 rounded-full bg-red-500" />
+              </div>
+              <p className="text-sm font-medium leading-tight">
+                {errors.confirmPassword}
+              </p>
+            </motion.div>
           )}
         </div>
 
