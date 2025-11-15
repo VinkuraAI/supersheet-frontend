@@ -45,7 +45,7 @@ export default function CandidateFormPage() {
       const fetchForm = async () => {
         setIsLoading(true);
         try {
-          const response = await apiClient.get(`/api/forms/${formId}/view`);
+          const response = await apiClient.get(`/forms/${formId}/view`);
           setForm(response.data);
         } catch (err) {
           setError('Failed to load the form. It may no longer be available.');
@@ -107,7 +107,7 @@ export default function CandidateFormPage() {
     formData.append('resume', resume);
 
     try {
-      await apiClient.post(`/api/forms/${formId}/submissions`, formData, {
+      await apiClient.post(`/forms/${formId}/submissions`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

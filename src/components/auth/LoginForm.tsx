@@ -48,8 +48,18 @@ export default function LoginForm() {
     
     try {
       await login(formData.email, formData.password);
-      // Redirect to welcome page after successful login
-      router.push('/welcome');
+      
+      // Check if user has workspaces before redirecting
+      const { default: apiClient } = await import('@/utils/api.client');
+      const response = await apiClient.get('/workspaces');
+      const workspaces = response.data;
+      
+      // Redirect based on workspace count
+      if (workspaces && workspaces.length > 0) {
+        router.push('/dashboard');
+      } else {
+        router.push('/welcome');
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";
       setErrors({ general: message });

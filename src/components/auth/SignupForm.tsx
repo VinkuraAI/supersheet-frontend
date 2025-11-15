@@ -72,7 +72,7 @@ export default function SignupForm() {
 
     setIsLoading(true);
     try {
-      const res = await apiClient.post("/api/users/signup", formData);
+      const res = await apiClient.post("/users/signup", formData);
       console.log(res.data.message);
       
       // Clear form and redirect to login

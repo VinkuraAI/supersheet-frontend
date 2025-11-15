@@ -12,10 +12,16 @@ export async function middleware(request: NextRequest) {
 
   // If the user is logged in and tries to access the welcome page
   if (pathname.startsWith('/welcome')) {
+    // If the user is trying to create a new workspace, let them through.
+    if (request.nextUrl.searchParams.get('create') === 'true') {
+      console.log("????")
+      return NextResponse.next();
+    }
+
     try {
       // We must use the full backend URL here as this is a server-to-server request.
       // The /api proxy is for client-side requests only.
-      const backendUrl = 'https://supersheet-backend.onrender.com/workspaces';
+      const backendUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/workspaces`;
       
       const response = await fetch(backendUrl, {
         headers: {
@@ -26,7 +32,7 @@ export async function middleware(request: NextRequest) {
       if (response.ok) {
         const workspaces = await response.json();
         // If the user has one or more workspaces, redirect them to the main app.
-        if (workspaces && workspaces.length > 0) {
+        if (workspaces && workspaces.length > 1 ) {
           return NextResponse.redirect(new URL('/workspace', request.url));
         }
       }

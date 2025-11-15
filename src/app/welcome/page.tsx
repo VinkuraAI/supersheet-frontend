@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { 
@@ -170,13 +170,31 @@ const hrOptions = [
 ];
 
 import { useAuth } from "../../lib/auth-context";
+import { useSearchParams } from "next/navigation";
+import { useWorkspace } from "../../lib/workspace-context";
 
-export default function WelcomePage() {
+// Component that uses useSearchParams - must be wrapped in Suspense
+function WelcomePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<'welcome' | 'loading' | 'selection' | 'hr-options'>('welcome');
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [selectedHrOption, setSelectedHrOption] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      // Check workspace limit before allowing creation
+      if (!canCreateWorkspace) {
+        alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces. Please delete an existing workspace to create a new one.`);
+        router.push('/dashboard');
+        return;
+      }
+      console.log("ho gaya set ");
+      setCurrentStep('selection');
+    }
+  }, [searchParams, canCreateWorkspace, maxWorkspaces, router]);
 
   const handleGetStarted = () => {
     setCurrentStep('selection');
@@ -738,5 +756,26 @@ export default function WelcomePage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function WelcomePageLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-slate-600">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main export wrapped in Suspense
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={<WelcomePageLoading />}>
+      <WelcomePageContent />
+    </Suspense>
   );
 }

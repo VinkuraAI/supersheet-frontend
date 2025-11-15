@@ -63,7 +63,7 @@ interface PageContentProps {
 }
 
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import apiClient from "@/utils/api.client";
 import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog";
@@ -189,6 +189,12 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
                           setWorkspaceData((prev: any) => ({ ...prev, jd: newJd }));
                         }}
                       />
+                      <Link href={`/workspace/${selectedWorkspace._id}/documents`}>
+                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                          <FolderOpen className="mr-1.5 h-3 w-3" />
+                          Documents
+                        </Button>
+                      </Link>
                       <Link href={`/workspace/${selectedWorkspace._id}/forms`}>
                         <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                           <FileText className="mr-1.5 h-3 w-3" />

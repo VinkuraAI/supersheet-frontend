@@ -55,55 +55,50 @@ export function EmailComposerDialog({
   };
 
   const handleSendEmail = async () => {
+    console.log("Called the handleSendEmail");
     // Validation
     if (!formData.candidateEmail || !formData.candidateName || !formData.hrName || 
         !formData.companyName || !formData.meetingLink || !formData.subject) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
         variant: "destructive",
+        title: "⚠️ Missing Information",
+        description: "Please fill in all required fields before sending the email.",
       });
       return;
     }
-
+    console.log("Here ?");
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.candidateEmail)) {
       toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
         variant: "destructive",
+        title: "❌ Invalid Email",
+        description: "Please enter a valid email address for the candidate.",
       });
       return;
     }
-
+    console.log("Here 2 ?");
     // Validate meeting link format
     if (!formData.meetingLink.startsWith('http://') && !formData.meetingLink.startsWith('https://')) {
       toast({
-        title: "Invalid Meeting Link",
+        variant: "warning",
+        title: "🔗 Invalid Meeting Link",
         description: "Meeting link must start with http:// or https://",
-        variant: "destructive",
       });
       return;
     }
-
+    console.log("here 3 ??");
     setSending(true);
 
     try {
-      // Remove trailing slash from API URL to avoid double slashes
-      let apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
-      apiUrl = apiUrl.replace(/\/$/, ''); // Remove trailing slash if present
-      
-      const response = await fetch(
-        `${apiUrl}/api/send-status-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      // Use the Next.js API proxy to send email through backend
+      const response = await fetch('/api/mail/send-status-email', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
       // Check if response is JSON
       const contentType = response.headers.get("content-type");
@@ -112,8 +107,8 @@ export function EmailComposerDialog({
         const textResponse = await response.text();
         console.error("Non-JSON response from server:", textResponse);
         throw new Error(
-          `Backend API error: The server returned an HTML page instead of JSON. ` +
-          `Please ensure the backend is running at ${apiUrl} and the endpoint /api/send-status-email exists.`
+          "Backend API error: The server returned an unexpected response. " +
+          "Please ensure the backend endpoint /send-status-email is properly configured."
         );
       }
 
@@ -121,8 +116,9 @@ export function EmailComposerDialog({
 
       if (response.ok && data.success) {
         toast({
-          title: "Email Sent Successfully",
-          description: `Email sent to ${formData.candidateName}`,
+          variant: "success",
+          title: "✅ Email Sent Successfully!",
+          description: `Your email has been sent to ${formData.candidateName} at ${formData.candidateEmail}`,
         });
         onEmailSent();
         onOpenChange(false);
@@ -142,9 +138,9 @@ export function EmailComposerDialog({
       }
       
       toast({
-        title: "Failed to Send Email",
-        description: errorMessage,
         variant: "destructive",
+        title: "❌ Failed to Send Email",
+        description: errorMessage,
       });
     } finally {
       setSending(false);

@@ -21,6 +21,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -105,7 +113,7 @@ function FeedbackCell({ aiScore }: { aiScore: number }) {
   const feedback = getFeedbackFromScore(aiScore || 0);
   
   return (
-    <div className={`px-2 py-1 rounded border text-xs font-medium ${feedback.color}`}>
+    <div className={`px-2 py-1 rounded border text-xs font-medium whitespace-normal break-words ${feedback.color}`}>
       {feedback.text}
     </div>
   );
@@ -383,15 +391,23 @@ export function TicketsTable({
     schema.forEach(col => {
       // Set different default widths based on column type
       if (col.name === "Feedback") {
-        initialWidths[col.name] = 200; // Wider for feedback text
+        initialWidths[col.name] = 270; // Wider for feedback text
       } else if (col.name === "Status") {
-        initialWidths[col.name] = 120; // Wider for status dropdown
+        initialWidths[col.name] = 140; // Wider for status dropdown
       } else if (col.name === "Informed") {
-        initialWidths[col.name] = 120; // Wider for informed dropdown
+        initialWidths[col.name] = 140; // Wider for informed dropdown
       } else if (col.name === "Notes") {
-        initialWidths[col.name] = 150; // Wider for notes
+        initialWidths[col.name] = 220; // Wider for notes
+      } else if (col.name === "Name" || col.name === "Email") {
+        initialWidths[col.name] = 160; // Wider for name and email
+      } else if (col.name === "Phone" || col.name === "Location") {
+        initialWidths[col.name] = 140; // Medium width
+      } else if (col.name === "AI Score" || col.name === "Experience") {
+        initialWidths[col.name] = 50; // Very compact for numeric values
+      } else if (col.name === "Skills" || col.name === "Education") {
+        initialWidths[col.name] = 180; // Medium-wide for skills/education
       } else {
-        initialWidths[col.name] = 90; // Default width reduced by 25%
+        initialWidths[col.name] = 130; // Default width
       }
     });
     setColumnWidths(initialWidths);
@@ -469,7 +485,7 @@ export function TicketsTable({
 
     try {
       // Send email first
-      await apiClient.post(`/api/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {});
+      await apiClient.post(`/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {});
       
       // Then update status
       const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Yes' };
@@ -663,7 +679,7 @@ export function TicketsTable({
     );
 
     try {
-      await apiClient.post(`/api/workspaces/${selectedWorkspace?._id}/sync`, {
+      await apiClient.post(`/workspaces/${selectedWorkspace?._id}/sync`, {
         added,
         updated,
         deleted,
@@ -807,7 +823,8 @@ export function TicketsTable({
           <Table 
             style={{ 
               tableLayout: 'fixed',
-              width: Object.values(columnWidths).reduce((sum, width) => sum + width, 0) + 'px'
+              width: '100%',
+              minWidth: Object.values(columnWidths).reduce((sum, width) => sum + width, 0) + 'px'
             }}
           >
           <TableHeader>
@@ -870,34 +887,35 @@ export function TicketsTable({
               </TableRow>
             ) : (
               currentData.map((row, rowIndex) => (
-                <TableRow
-                  key={row._id || rowIndex}
-                  className="hover:bg-primary/5"
-                >
-                  <TableCell
-                    className="border-r bg-muted/30 cursor-pointer"
-                    style={{ 
-                      width: columnWidths.checkbox,
-                      minWidth: columnWidths.checkbox,
-                      maxWidth: columnWidths.checkbox,
-                    }}
-                    onClick={() =>
-                      handleRowSelect(rowIndex, !selectedRows.has(rowIndex))
-                    }
-                  >
-                    <Checkbox
-                      aria-label={`Select row ${rowIndex}`}
-                      checked={selectedRows.has(rowIndex)}
-                      onCheckedChange={(checked) =>
-                        handleRowSelect(rowIndex, checked === true)
-                      }
-                    />
-                  </TableCell>
-                  {schema.map((col, colIndex) => (
+                <ContextMenu key={row._id || rowIndex}>
+                  <ContextMenuTrigger asChild>
+                    <TableRow
+                      className="hover:bg-primary/5 cursor-pointer"
+                    >
+                      <TableCell
+                        className="border-r bg-muted/30 cursor-pointer"
+                        style={{ 
+                          width: columnWidths.checkbox,
+                          minWidth: columnWidths.checkbox,
+                          maxWidth: columnWidths.checkbox,
+                        }}
+                        onClick={() =>
+                          handleRowSelect(rowIndex, !selectedRows.has(rowIndex))
+                        }
+                      >
+                        <Checkbox
+                          aria-label={`Select row ${rowIndex}`}
+                          checked={selectedRows.has(rowIndex)}
+                          onCheckedChange={(checked) =>
+                            handleRowSelect(rowIndex, checked === true)
+                          }
+                        />
+                      </TableCell>
+                      {schema.map((col, colIndex) => (
 
 <TableCell
                       key={`${col.name}-${colIndex}`}
-                      className="border-r bg-background overflow-hidden whitespace-nowrap"
+                      className={`border-r bg-background ${col.name === "Feedback" ? "overflow-visible" : "overflow-hidden whitespace-nowrap"}`}
                       style={{
                         width: columnWidths[col.name],
                         minWidth: columnWidths[col.name],
@@ -942,7 +960,33 @@ export function TicketsTable({
                       )}
                     </TableCell>
                   ))}
-                </TableRow>
+                    </TableRow>
+                  </ContextMenuTrigger>
+                  
+                  {/* Context Menu Content */}
+                  <ContextMenuContent className="w-56">
+                    <ContextMenuLabel className="font-semibold text-blue-600">
+                      Change Status
+                    </ContextMenuLabel>
+                    <ContextMenuSeparator />
+                    
+                    {STATUS_OPTIONS.map((status) => (
+                      <ContextMenuItem
+                        key={status.value}
+                        onClick={() => handleStatusChange(rowIndex, status.value)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 w-full">
+                          <div className={`w-3 h-3 rounded-full ${status.color.split(' ')[0].replace('bg-', 'bg-')}`} />
+                          <span className="flex-1">{status.value}</span>
+                          {row.data.Status === status.value && (
+                            <div className="text-blue-600">✓</div>
+                          )}
+                        </div>
+                      </ContextMenuItem>
+                    ))}
+                  </ContextMenuContent>
+                </ContextMenu>
               ))
             )}
           </TableBody>

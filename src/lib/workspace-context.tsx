@@ -16,6 +16,9 @@ interface WorkspaceContextType {
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
   isLoading: boolean;
+  canCreateWorkspace: boolean;
+  workspaceCount: number;
+  maxWorkspaces: number;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -39,27 +42,38 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const response = await apiClient.get<Workspace[]>("/api/workspaces");
-        setWorkspaces(response.data);
+        const response = await apiClient.get<Workspace[]>("/workspaces");
+        const fetchedWorkspaces = response.data;
+        setWorkspaces(fetchedWorkspaces);
 
         const pathSegments = pathname.split('/');
-        const workspaceIdFromUrl = pathSegments.length > 2 ? pathSegments[2] : null;
+        const workspaceIdFromUrl = pathSegments.length > 2 && pathSegments[1] === 'workspace' ? pathSegments[2] : null;
 
         if (workspaceIdFromUrl) {
-          const found = response.data.find(w => w._id === workspaceIdFromUrl);
+          const found = fetchedWorkspaces.find(w => w._id === workspaceIdFromUrl);
           setSelectedWorkspaceState(found || null);
         } else {
-          const lastSelectedId = localStorage.getItem("selectedWorkspaceId");
-          if (lastSelectedId) {
-            const found = response.data.find(w => w._id === lastSelectedId);
-            if (found) {
-              router.push(`/workspace/${found._id}`);
+          const isAuthPage = pathname.startsWith('/auth');
+          const isWelcomePage = pathname === '/welcome';
+          const isWorkspaceSetupPage = pathname === '/workspace-setup';
+          const isDashboardPage = pathname === '/dashboard';
+          const isRootPage = pathname === '/';
+
+          if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isDashboardPage && !isRootPage) {
+            if (fetchedWorkspaces.length > 0) {
+              router.push('/dashboard');
+            } else {
+              router.push('/welcome');
             }
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Handle 401 Unauthorized - user needs to log in
-        if (error.response?.status === 401) {
+        const isAuthError = error && typeof error === 'object' && 'response' in error && 
+          error.response && typeof error.response === 'object' && 'status' in error.response && 
+          error.response.status === 401;
+        
+        if (isAuthError) {
           // User is not authenticated, silently handle it
           localStorage.removeItem("user");
           setWorkspaces([]);
@@ -89,8 +103,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const maxWorkspaces = 2;
+  const workspaceCount = workspaces.length;
+  const canCreateWorkspace = workspaceCount < maxWorkspaces;
+
   return (
-    <WorkspaceContext.Provider value={{ workspaces, setWorkspaces, selectedWorkspace, setSelectedWorkspace, isLoading }}>
+    <WorkspaceContext.Provider value={{ 
+      workspaces, 
+      setWorkspaces, 
+      selectedWorkspace, 
+      setSelectedWorkspace, 
+      isLoading,
+      canCreateWorkspace,
+      workspaceCount,
+      maxWorkspaces
+    }}>
       {children}
     </WorkspaceContext.Provider>
   );

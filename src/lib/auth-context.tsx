@@ -41,13 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await apiClient.post("/api/users/login", { email, password });
+      const response = await apiClient.post("/users/login", { email, password });
       if (response.data && response.data.user) {
         const backendUser = response.data.user;
         const appUser: User = {
           id: backendUser.id,
           email: backendUser.email,
-          name: backendUser.user_metadata.name,
+          name: backendUser.name,
         };
         localStorage.setItem("user", JSON.stringify(appUser));
         setUser(appUser);

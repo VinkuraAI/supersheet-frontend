@@ -177,3 +177,32 @@ input:focus::placeholder {
   font-size: 0.9rem;
 }
 
+/* Toast animations and effects */
+@keyframes toast-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.toast-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: toast-shimmer 2s ease-in-out infinite;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
