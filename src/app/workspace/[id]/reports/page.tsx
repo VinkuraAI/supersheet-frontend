@@ -246,16 +246,22 @@ export default function WorkspaceReportsPage() {
     const totalCandidates = rows.length;
     console.log('Total candidates:', totalCandidates);
     
-    // Find columns with multiple strategies
+    // Find columns with multiple strategies and better detection
     const statusColumn = schema.find(col => 
       col.name.toLowerCase().includes('status')
     )?.name || 'Status';
     
-    const scoreColumn = schema.find(col => 
-      col.name === 'AI Score' || 
-      col.name.toLowerCase() === 'ai score' ||
-      col.name.toLowerCase().includes('score')
-    )?.name || 'AI Score';
+    // Try multiple ways to find AI Score column
+    let scoreColumn = schema.find(col => col.name === 'AI Score')?.name;
+    if (!scoreColumn) {
+      scoreColumn = schema.find(col => col.name.toLowerCase() === 'ai score')?.name;
+    }
+    if (!scoreColumn) {
+      scoreColumn = schema.find(col => col.name.toLowerCase().includes('score'))?.name;
+    }
+    if (!scoreColumn) {
+      scoreColumn = 'AI Score'; // fallback
+    }
     
     const departmentColumn = schema.find(col => 
       col.name.toLowerCase().includes('department') ||
@@ -276,21 +282,33 @@ export default function WorkspaceReportsPage() {
     console.log('Detected departmentColumn:', departmentColumn);
     console.log('Detected dateColumn:', dateColumn);
 
-    // Sample first few rows to understand data structure
-    console.log('=== SAMPLE DATA ===');
-    rows.slice(0, 3).forEach((row, index) => {
+    // Sample ALL rows to understand data structure better
+    console.log('=== ALL DATA INSPECTION ===');
+    rows.forEach((row, index) => {
+      // Try different ways to access the AI Score
+      const scoreValue1 = row[scoreColumn];
+      const scoreValue2 = row['AI Score'];
+      const scoreValue3 = row.data ? row.data[scoreColumn] : undefined;
+      const scoreValue4 = row.data ? row.data['AI Score'] : undefined;
+      
       console.log(`Row ${index}:`, {
-        status: row[statusColumn],
-        score: row[scoreColumn],
-        department: row[departmentColumn],
-        date: row[dateColumn],
-        allKeys: Object.keys(row)
+        scoreColumn: scoreColumn,
+        'row[scoreColumn]': scoreValue1,
+        'row["AI Score"]': scoreValue2,
+        'row.data[scoreColumn]': scoreValue3,
+        'row.data["AI Score"]': scoreValue4,
+        'row structure': Object.keys(row),
+        'row.data structure': row.data ? Object.keys(row.data) : 'no data property'
       });
     });
 
-    // Calculate hired candidates
+    // Calculate hired candidates with better data access
     const hiredCandidates = rows.filter(row => {
-      const status = row[statusColumn];
+      // Try different ways to access status
+      const status1 = row[statusColumn];
+      const status2 = row.data ? row.data[statusColumn] : undefined;
+      const status = status1 || status2;
+      
       const isHired = status && typeof status === 'string' && status.toLowerCase().includes('hired');
       console.log(`Hired check: "${status}" -> ${isHired}`);
       return isHired;
@@ -298,20 +316,36 @@ export default function WorkspaceReportsPage() {
 
     console.log('Total hired candidates:', hiredCandidates);
 
-    // Calculate suitable candidates (AI Score > 85)
+    // Calculate suitable candidates (AI Score > 85) with better data access
     const suitableCandidates = rows.filter(row => {
-      const rawScore = row[scoreColumn];
+      // Try different ways to access AI Score
+      const rawScore1 = row[scoreColumn];
+      const rawScore2 = row['AI Score'];
+      const rawScore3 = row.data ? row.data[scoreColumn] : undefined;
+      const rawScore4 = row.data ? row.data['AI Score'] : undefined;
+      
+      const rawScore = rawScore1 || rawScore2 || rawScore3 || rawScore4;
       const score = parseFloat(rawScore);
       const isSuitable = !isNaN(score) && score > 85;
-      console.log(`Suitable check: "${rawScore}" -> parsed: ${score} -> suitable: ${isSuitable}`);
+      
+      console.log(`Suitable check: raw1="${rawScore1}" raw2="${rawScore2}" raw3="${rawScore3}" raw4="${rawScore4}" -> final="${rawScore}" -> parsed: ${score} -> suitable: ${isSuitable}`);
       return isSuitable;
     }).length;
 
     console.log('Total suitable candidates:', suitableCandidates);
 
-    // Calculate average score with better validation
+    // Calculate average score with better validation and data access
     const validScores = rows
-      .map(row => parseFloat(row[scoreColumn]))
+      .map(row => {
+        // Try different ways to access AI Score
+        const rawScore1 = row[scoreColumn];
+        const rawScore2 = row['AI Score'];
+        const rawScore3 = row.data ? row.data[scoreColumn] : undefined;
+        const rawScore4 = row.data ? row.data['AI Score'] : undefined;
+        
+        const rawScore = rawScore1 || rawScore2 || rawScore3 || rawScore4;
+        return parseFloat(rawScore);
+      })
       .filter(score => !isNaN(score) && score > 0);
     
     console.log('Valid scores:', validScores);
@@ -361,20 +395,34 @@ export default function WorkspaceReportsPage() {
       monthlyData[monthKey] = { applications: 0, hired: 0, suitable: 0 };
     }
 
-    // Process rows
+    // Process rows with improved data access
     rows.forEach(row => {
-      if (row[dateColumn]) {
-        const rowDate = new Date(row[dateColumn]);
+      const dateValue = row[dateColumn] || (row.data ? row.data[dateColumn] : undefined);
+      if (dateValue) {
+        const rowDate = new Date(dateValue);
         const monthKey = months[rowDate.getMonth()];
         
         if (monthlyData[monthKey]) {
           monthlyData[monthKey].applications++;
           
-          if (row[statusColumn] && row[statusColumn].toLowerCase().includes('hired')) {
+          // Check hired status with multiple access patterns
+          const status1 = row[statusColumn];
+          const status2 = row.data ? row.data[statusColumn] : undefined;
+          const status = status1 || status2;
+          
+          if (status && typeof status === 'string' && status.toLowerCase().includes('hired')) {
             monthlyData[monthKey].hired++;
           }
           
-          const score = parseFloat(row[scoreColumn]);
+          // Check suitable score with multiple access patterns
+          const rawScore1 = row[scoreColumn];
+          const rawScore2 = row['AI Score'];
+          const rawScore3 = row.data ? row.data[scoreColumn] : undefined;
+          const rawScore4 = row.data ? row.data['AI Score'] : undefined;
+          
+          const rawScore = rawScore1 || rawScore2 || rawScore3 || rawScore4;
+          const score = parseFloat(rawScore);
+          
           if (!isNaN(score) && score > 85) {
             monthlyData[monthKey].suitable++;
             console.log(`Monthly trend: ${monthKey} - suitable candidate with score ${score}`);
@@ -415,12 +463,15 @@ export default function WorkspaceReportsPage() {
     }));
   };
 
-  // Generate department statistics
+  // Generate department statistics with improved data access
   const generateDepartmentStats = (rows: any[], departmentColumn: string, statusColumn: string, scoreColumn: string) => {
     const departmentData: { [key: string]: { total: number; hired: number; suitable: number } } = {};
 
     rows.forEach(row => {
-      const department = row[departmentColumn] || 'Unknown';
+      // Get department with multiple access patterns
+      const dept1 = row[departmentColumn];
+      const dept2 = row.data ? row.data[departmentColumn] : undefined;
+      const department = dept1 || dept2 || 'Unknown';
       
       if (!departmentData[department]) {
         departmentData[department] = { total: 0, hired: 0, suitable: 0 };
@@ -428,11 +479,24 @@ export default function WorkspaceReportsPage() {
       
       departmentData[department].total++;
       
-      if (row[statusColumn] && row[statusColumn].toLowerCase().includes('hired')) {
+      // Check hired status with multiple access patterns
+      const status1 = row[statusColumn];
+      const status2 = row.data ? row.data[statusColumn] : undefined;
+      const status = status1 || status2;
+      
+      if (status && typeof status === 'string' && status.toLowerCase().includes('hired')) {
         departmentData[department].hired++;
       }
       
-      const score = parseFloat(row[scoreColumn]);
+      // Check suitable score with multiple access patterns
+      const rawScore1 = row[scoreColumn];
+      const rawScore2 = row['AI Score'];
+      const rawScore3 = row.data ? row.data[scoreColumn] : undefined;
+      const rawScore4 = row.data ? row.data['AI Score'] : undefined;
+      
+      const rawScore = rawScore1 || rawScore2 || rawScore3 || rawScore4;
+      const score = parseFloat(rawScore);
+      
       if (!isNaN(score) && score > 85) {
         departmentData[department].suitable++;
         console.log(`Department ${department}: suitable candidate with score ${score}`);
