@@ -266,6 +266,17 @@ export function SideNav() {
                       <Plus className="h-3 w-3" />
                       {item.label}
                     </button>
+                  ) : item.label === "Reports" ? (
+                    <Link
+                      href="/reports"
+                      className={cn(
+                        "block rounded-md px-1.5 py-1 hover:bg-muted",
+                        item.active ? "bg-muted font-medium" : ""
+                      )}
+                      aria-current={item.active ? "page" : undefined}
+                    >
+                      {item.label}
+                    </Link>
                   ) : (
                     <a
                       href="#"

@@ -58,8 +58,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           const isWorkspaceSetupPage = pathname === '/workspace-setup';
           const isDashboardPage = pathname === '/dashboard';
           const isRootPage = pathname === '/';
+          const isReportsPage = pathname === '/reports';
+          const isWorkspaceReportsPage = pathname === '/workspace/reports';
 
-          if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isDashboardPage && !isRootPage) {
+          if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isDashboardPage && !isRootPage && !isReportsPage && !isWorkspaceReportsPage) {
             if (fetchedWorkspaces.length > 0) {
               router.push('/dashboard');
             } else {

@@ -40,7 +40,8 @@ import {
   LogOut,
   User,
   FolderOpen,
-  FileText
+  FileText,
+  BarChart3
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -135,6 +136,9 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
       if (path.includes('/forms')) {
         return { name: 'Forms', icon: 'file' }
       }
+      if (path.includes('/reports')) {
+        return { name: 'Reports', icon: 'chart' }
+      }
     }
     return null
   }
@@ -216,6 +220,7 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
                       <BreadcrumbPage className="font-medium text-foreground flex items-center gap-2">
                         {currentPage.icon === 'folder' && <FolderOpen className="h-4 w-4" />}
                         {currentPage.icon === 'file' && <FileText className="h-4 w-4" />}
+                        {currentPage.icon === 'chart' && <BarChart3 className="h-4 w-4" />}
                         {currentPage.name}
                       </BreadcrumbPage>
                     </BreadcrumbItem>
