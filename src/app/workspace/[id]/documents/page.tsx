@@ -40,6 +40,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 
 const DocumentsPage = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -263,110 +264,176 @@ const DocumentsPage = () => {
   };
 
   return (
-    <main className="min-h-dvh flex flex-col text-[0.75rem] bg-muted/30">
-      <Toaster richColors position="top-center" />
-      
-      {/* Header - Topbar Style */}
-      <header className="border-b bg-card flex-shrink-0">
-        <div className="mx-auto flex w-full items-center gap-2 p-2">
-          {/* App launcher / logo placeholder - Menu button removed since there's no sidebar on this page */}
-          <div className="h-6 w-6 rounded bg-muted" aria-hidden />
-
-          {/* Breadcrumbs - File Path Style */}
-          <div className="hidden min-w-0 md:flex items-center">
-            <Breadcrumb>
-              <BreadcrumbList className="text-sm font-mono">
-                {isWorkspaceLoading ? (
-                  <Skeleton className="h-5 w-32" />
-                ) : (
-                  <>
-                    {/* Home/Dashboard Link */}
-                    <BreadcrumbItem>
-                      <BreadcrumbLink 
-                        onClick={() => router.push('/dashboard')}
-                        className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer group"
-                      >
-                        <Home className="w-3.5 h-3.5" />
-                        <span className="relative">
-                          home
-                          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-                        </span>
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    
-                    {/* Separator */}
-                    <BreadcrumbSeparator>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                    </BreadcrumbSeparator>
-                    
-                    {/* Workspace Name (clickable) */}
-                    <BreadcrumbItem>
-                      {selectedWorkspace ? (
-                        <BreadcrumbLink
-                          onClick={handleBackToWorkspace}
-                          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer group"
-                        >
-                          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500" />
-                          <span className="relative">
-                            {selectedWorkspace.name}
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-                          </span>
-                        </BreadcrumbLink>
-                      ) : (
-                        <BreadcrumbPage className="text-muted-foreground italic">
-                          No workspace selected
-                        </BreadcrumbPage>
-                      )}
-                    </BreadcrumbItem>
-
-                    {/* Separator */}
-                    <BreadcrumbSeparator>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                    </BreadcrumbSeparator>
-
-                    {/* Documents Page */}
-                    <BreadcrumbItem>
-                      <BreadcrumbPage className="font-semibold text-foreground flex items-center gap-1.5">
-                        <FolderOpen className="w-3.5 h-3.5" />
-                        documents
-                      </BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </>
-                )}
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-
-          {/* Right side - Just a placeholder for balance */}
-          <div className="ml-auto" />
-        </div>
+    <WorkspaceLayout>
+      <div className="flex flex-col h-full">
+        <Toaster richColors position="top-center" />
         
-        {/* Secondary header with document count - only on mobile */}
-        <div className="md:hidden border-t px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <FolderOpen className="w-3 h-3 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xs font-semibold text-foreground">
-                {selectedWorkspace?.name || 'Documents'}
-              </h1>
-              <p className="text-[0.65rem] text-muted-foreground">
-                {documents.length} {documents.length === 1 ? 'document' : 'documents'}
-              </p>
+        {/* Simple header with document count */}
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="mx-auto flex w-full items-center justify-between gap-2 p-3">
+            <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <FolderOpen className="w-5 h-5" />
+              Documents
+            </h1>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{documents.length} {documents.length === 1 ? 'document' : 'documents'}</span>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+        {/* Content */}
+        <section 
+          className="flex-1 p-3 overflow-auto relative"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* Drag Overlay */}
+          <AnimatePresence>
+            {isDragging && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-50 flex items-center justify-center bg-blue-500/10 backdrop-blur-sm"
+              >
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.9 }}
+                  className="bg-card border-2 border-dashed border-blue-500 rounded-2xl p-12 shadow-2xl"
+                >
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                      <UploadCloud className="w-10 h-10 text-white animate-bounce" />
+                    </div>
+                    <div className="text-center">
+                      <h3 className="text-xl font-bold text-foreground mb-2">
+                        Drop your file here
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Release to upload your document
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* Content */}
-      <section 
-        className="flex-1 p-3 overflow-auto relative"
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
+          <div className="bg-card border rounded-md p-4 min-h-[calc(100vh-120px)]">
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileSelect}
+              accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif"
+            />
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <Skeleton key={index} className="h-32 rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <>
+                {/* Upload Section - Always show at top */}
+                <div className="mb-6">
+                  <AnimatePresence mode="wait">
+                    {fileToUpload ? (
+                      /* File upload preview content would go here */
+                      <div>File upload preview...</div>
+                    ) : (
+                      /* Upload area would go here */
+                      <div>
+                        <Button
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full h-24 border-dashed border-2 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                        >
+                          <div className="flex flex-col items-center gap-2">
+                            <UploadCloud className="w-6 h-6 text-muted-foreground" />
+                            <span className="text-sm font-medium">Upload Document</span>
+                            <span className="text-xs text-muted-foreground">
+                              PDF, DOC, DOCX, TXT, XLS, XLSX, CSV, or images
+                            </span>
+                          </div>
+                        </Button>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Documents Grid */}
+                {documents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FolderOpen className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">No documents yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload your first document to get started
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    <AnimatePresence mode="popLayout">
+                      {documents.map((doc, index) => (
+                        <motion.div
+                          key={doc._id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ delay: index * 0.03 }}
+                          className="group relative bg-card border rounded-lg p-4 hover:border-blue-400 hover:shadow-md transition-all duration-200"
+                        >
+                          {/* Document Icon */}
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getFileGradient(doc.name)} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                              {getFileIcon(doc.name)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-xs font-semibold text-foreground truncate mb-1" title={doc.name}>
+                                {doc.name}
+                              </h3>
+                              <div className="flex items-center gap-2 text-[0.65rem] text-muted-foreground">
+                                <Calendar className="w-3 h-3" />
+                                <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 pt-2 border-t opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="sm"
+                              className="flex-1 h-7 text-xs hover:bg-blue-50 hover:text-blue-700"
+                            >
+                              <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-3 w-3 mr-1.5" />
+                                Download
+                              </a>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => handleDeleteClick(doc)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
         {/* Drag Overlay */}
         <AnimatePresence>
           {isDragging && (
@@ -606,29 +673,29 @@ const DocumentsPage = () => {
             </>
           )}
         </div>
-      </section>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Document?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{documentToDelete?.name}&quot;? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </main>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete &quot;{documentToDelete?.name}&quot;? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </WorkspaceLayout>
   );
 };
 

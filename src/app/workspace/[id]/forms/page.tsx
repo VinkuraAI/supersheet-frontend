@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,11 +20,18 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, FileUp, GripVertical, Check, X, Loader2, Link as LinkIcon, Mail, Phone, CheckCircle } from "lucide-react"
-import { TopBar } from "@/components/service-desk/topbar"
-import { SideNav } from "@/components/service-desk/sidenav"
-import { RightPanel } from "@/components/service-desk/right-panel"
-import { AiChatWidget } from "@/components/service-desk/ai-chat-widget"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { Plus, Trash2, FileUp, GripVertical, Check, X, Loader2, Link as LinkIcon, Mail, Phone, CheckCircle, Home, ChevronRight, FileText } from "lucide-react"
+import { WorkspaceLayout } from "@/components/workspace/workspace-layout"
+import { useWorkspace } from "@/lib/workspace-context"
+import { Skeleton } from "@/components/ui/skeleton"
 import apiClient from "@/utils/api.client";
 
 type FieldType = "text" | "multiple-choice"
@@ -65,22 +72,19 @@ const formatExperience = (yearsDecimal: number) => {
 
 export default function HRFormsPage() {
   const params = useParams();
-  const workspaceId = params.id as string; // This is the workspace ID, but we need the form ID.
+  const router = useRouter();
+  const workspaceId = params.id as string;
+  const { selectedWorkspace, workspaces, setSelectedWorkspace, isLoading: isWorkspaceLoading } = useWorkspace();
 
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
-
+  // Set the selected workspace based on URL parameter
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1272) {
-        setLeftSidebarOpen(false)
-        setRightSidebarOpen(false)
+    if (workspaceId && workspaces.length > 0 && (!selectedWorkspace || selectedWorkspace._id !== workspaceId)) {
+      const workspace = workspaces.find(w => w._id === workspaceId);
+      if (workspace) {
+        setSelectedWorkspace(workspace);
       }
     }
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [workspaceId, workspaces, selectedWorkspace, setSelectedWorkspace]);
 
   const [formId, setFormId] = useState<string | null>(null); // To store the ID of the created/fetched form
   const [formExists, setFormExists] = useState(false)
@@ -95,6 +99,10 @@ export default function HRFormsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [formCreationSuccess, setFormCreationSuccess] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  const handleBackToWorkspace = () => {
+    router.push(`/workspace/${workspaceId}`);
+  };
 
   useEffect(() => {
     const fetchFormData = async () => {
@@ -632,58 +640,25 @@ export default function HRFormsPage() {
   }
 
   return (
-    <main className="min-h-dvh flex flex-col text-[0.75rem]">
-      <header className="border-b bg-card flex-shrink-0">
-        <TopBar
-          onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
-          onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
-          rightSidebarOpen={rightSidebarOpen}
-        />
-      </header>
-
-      <section className="flex flex-1 overflow-hidden relative">
-        <aside
-          className={`
-            fixed left-0 top-[43px] bottom-0 z-30 w-[195px] 
-            bg-card border-r transition-transform duration-300
-            overflow-y-auto scrollbar-hide
-            ${leftSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          `}
-          aria-label="Project navigation"
-        >
-          <div className="p-1.5">
-            <SideNav />
+    <WorkspaceLayout>
+      <div className="flex flex-col h-full">
+        {/* Simple header with submission count */}
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="mx-auto flex w-full items-center justify-between gap-2 p-3">
+            <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Forms
+            </h1>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{submissions.length} {submissions.length === 1 ? 'submission' : 'submissions'}</span>
+            </div>
           </div>
-        </aside>
+        </header>
 
-        <div
-          className={`
-            flex-1 flex flex-col transition-all duration-300 pb-18 w-fulln
-            ${leftSidebarOpen ? "ml-[195px]" : "ml-0"}
-            ${rightSidebarOpen ? "mr-[240px]" : "mr-0"}
-          `}
-        >
-          <div className="flex-1 flex flex-col gap-2 p-3 overflow-hidden w-full ">
-            {pageContent()}
-          </div>
+        <div className="flex-1 flex flex-col gap-2 p-3 overflow-hidden w-full">
+          {pageContent()}
         </div>
-
-        <aside
-          className={`
-            fixed right-0 top-[43px] bottom-0 z-30 w-[240px]
-            bg-card border-l transition-transform duration-300
-            overflow-y-auto scrollbar-hide
-            ${rightSidebarOpen ? "translate-x-0" : "translate-x-full"}
-          `}
-          aria-label="Project info"
-        >
-          <div className="p-2">
-            <RightPanel />
-          </div>
-        </aside>
-      </section>
-
-      <AiChatWidget />
-    </main>
+      </div>
+    </WorkspaceLayout>
   )
 }
