@@ -97,14 +97,20 @@ function WorkspaceSetup() {
     setActiveTab('upload');
     try {
       const formData = new FormData();
-      formData.append('pdf', file);
+      formData.append('jd', file); // Field name is 'jd' not 'pdf'
 
       console.log('Uploading PDF:', file.name, file.type, file.size);
 
-      const response = await apiClient.post('/workspaces/extract-pdf', formData);
+      const response = await apiClient.post('/workspaces/parse-jd', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      if (response.data && response.data.text) {
-        setJobDescription(response.data.text);
+      if (response.data && response.data.success && response.data.jd) {
+        setJobDescription(response.data.jd);
+      } else {
+        throw new Error('Invalid response from server');
       }
     } catch (error) {
       console.error('Error extracting text from PDF:', error);

@@ -51,12 +51,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Status options with colors
+// Status options with colors - matches backend email system
 const STATUS_OPTIONS = [
   { value: "New", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { value: "Under Review", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
   { value: "Shortlisted", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "Interviewed", color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  { value: "Rejected", color: "bg-red-100 text-red-700 border-red-200" },
   { value: "Hired", color: "bg-green-100 text-green-700 border-green-200" },
+  { value: "Archived", color: "bg-gray-100 text-gray-700 border-gray-200" },
 ];
 
 // Get feedback based on AI score
@@ -546,10 +548,18 @@ export function TicketsTable({
     const row = currentData[rowIndex];
     const oldStatus = row.data.Status;
 
-    // If status is changing to 'Shortlisted' or 'Hired', ask about sending email
-    if ((newStatus === 'Shortlisted' || newStatus === 'Hired') && oldStatus !== newStatus) {
+    // Auto-reject if AI Score < 40
+    const aiScore = parseFloat(row.data['AI Score']) || 0;
+    if (aiScore > 0 && aiScore < 40 && oldStatus === 'New') {
+      // Automatically set to Rejected and skip email
+      updateStatusOnly(rowIndex, 'Rejected');
+      return;
+    }
+
+    // If status is changing to any status except 'New', ask about sending email
+    if (newStatus !== 'New' && oldStatus !== newStatus) {
         if (!row.data.Name || !row.data.Email) {
-            alert("Please fill in the candidate's Name and Email before sending a mail.");
+            alert("Please fill in the candidate's Name and Email before changing status.");
             return;
         }
         setSelectedCandidateForEmail({
@@ -808,6 +818,7 @@ export function TicketsTable({
             name: selectedCandidateForEmail.name,
             email: selectedCandidateForEmail.email,
           }}
+          status={selectedCandidateForEmail.newStatus as "Shortlisted" | "Interviewed" | "Rejected" | "Hired" | "Archived"}
           onEmailSent={() => {
             // Update the status after email is sent successfully
             if (selectedCandidateForEmail) {

@@ -101,8 +101,13 @@ export default function CandidateFormPage() {
 
     setIsSubmitting(true);
     const formData = new FormData();
-    Object.entries(answers).forEach(([key, value]) => {
-      formData.append(key, value);
+    
+    // Map field IDs to field questions as backend expects field names as keys
+    Object.entries(answers).forEach(([fieldId, value]) => {
+      const field = form?.fields.find(f => f.id === fieldId);
+      if (field) {
+        formData.append(field.question, value);
+      }
     });
     formData.append('resume', resume);
 

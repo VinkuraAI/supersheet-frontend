@@ -112,7 +112,7 @@ export function SideNav() {
     if (workspaceForms[workspaceId]) return; // Already fetched
 
     try {
-      const response = await apiClient.get(`/workspaces/${workspaceId}/forms`);
+      const response = await apiClient.get(`/forms/workspace/${workspaceId}`);
       setWorkspaceForms((prev) => ({
         ...prev,
         [workspaceId]: response.data || [],

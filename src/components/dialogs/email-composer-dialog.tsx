@@ -9,8 +9,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/lib/user-context";
+import { useWorkspace } from "@/lib/workspace-context";
+import apiClient from "@/utils/api.client";
 
 interface EmailComposerDialogProps {
   open: boolean;
@@ -19,6 +23,7 @@ interface EmailComposerDialogProps {
     name: string;
     email: string;
   };
+  status: "Shortlisted" | "Interviewed" | "Rejected" | "Hired" | "Archived";
   onEmailSent: () => void;
 }
 
@@ -26,39 +31,102 @@ export function EmailComposerDialog({
   open,
   onOpenChange,
   candidateData,
+  status,
   onEmailSent,
 }: EmailComposerDialogProps) {
   const { toast } = useToast();
+  const { user } = useUser();
+  const { selectedWorkspace } = useWorkspace();
   const [sending, setSending] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [loadingPreview, setLoadingPreview] = useState(false);
   
+  // Get default subject based on status
+  const getDefaultSubject = (status: string) => {
+    switch (status) {
+      case "Shortlisted":
+        return "Congratulations! You've been shortlisted";
+      case "Interviewed":
+        return "Thank you for your interview";
+      case "Rejected":
+        return "Update on your application";
+      case "Hired":
+        return "Congratulations! Job Offer";
+      case "Archived":
+        return "Your application status";
+      default:
+        return "Application Update";
+    }
+  };
+
   // Form state
   const [formData, setFormData] = useState({
     candidateName: candidateData.name || "",
     candidateEmail: candidateData.email || "",
-    hrName: "",
-    companyName: "",
+    hrName: user?.fullName || "",
+    companyName: selectedWorkspace?.name || "",
     meetingLink: "",
-    subject: "Congratulations! You've been shortlisted",
+    subject: getDefaultSubject(status),
+    status: status,
+    additionalInfo: "",
   });
 
-  // Update form when candidateData changes
+  // Update form when candidateData, user, or workspace changes
   useEffect(() => {
     setFormData(prev => ({
       ...prev,
       candidateName: candidateData.name || "",
       candidateEmail: candidateData.email || "",
+      hrName: user?.fullName || prev.hrName,
+      companyName: selectedWorkspace?.name || prev.companyName,
+      status: status,
+      subject: getDefaultSubject(status),
     }));
-  }, [candidateData]);
+  }, [candidateData, user, selectedWorkspace, status]);
+
+  // Fetch email preview whenever form data changes
+  useEffect(() => {
+    const fetchPreview = async () => {
+      setLoadingPreview(true);
+      try {
+        // Backend only requires status, all other fields are optional with defaults
+        const response = await apiClient.post('/mail/preview', {
+          status: formData.status,
+          ...(formData.candidateName && { candidateName: formData.candidateName }),
+          ...(formData.hrName && { hrName: formData.hrName }),
+          ...(formData.companyName && { companyName: formData.companyName }),
+          ...(formData.meetingLink && { meetingLink: formData.meetingLink }),
+          ...(formData.additionalInfo && { additionalInfo: formData.additionalInfo }),
+        });
+        
+        // Backend returns HTML directly
+        setPreviewHtml(response.data);
+      } catch (error) {
+        console.error('Failed to fetch email preview:', error);
+        setPreviewHtml('<div style="padding:40px;text-align:center;color:#666;font-family:Arial,sans-serif;"><p style="font-size:16px;margin-bottom:8px;">📧 Email Preview</p><p style="font-size:14px;color:#999;">Preview will appear here as you fill in the form</p></div>');
+      } finally {
+        setLoadingPreview(false);
+      }
+    };
+
+    // Debounce the preview fetch
+    const timeoutId = setTimeout(() => {
+      fetchPreview();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSendEmail = async () => {
-    console.log("Called the handleSendEmail");
     // Validation
-    if (!formData.candidateEmail || !formData.candidateName || !formData.hrName || 
-        !formData.companyName || !formData.meetingLink || !formData.subject) {
+    const requiredFields = ["candidateEmail", "candidateName", "hrName", "companyName", "subject"];
+    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    
+    if (missingFields.length > 0) {
       toast({
         variant: "destructive",
         title: "⚠️ Missing Information",
@@ -66,7 +134,7 @@ export function EmailComposerDialog({
       });
       return;
     }
-    console.log("Here ?");
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.candidateEmail)) {
@@ -77,65 +145,60 @@ export function EmailComposerDialog({
       });
       return;
     }
-    console.log("Here 2 ?");
-    // Validate meeting link format
-    if (!formData.meetingLink.startsWith('http://') && !formData.meetingLink.startsWith('https://')) {
+
+    // Validate meeting link format only if provided and status is Shortlisted
+    if (formData.status === "Shortlisted" && formData.meetingLink && 
+        !formData.meetingLink.startsWith('http://') && !formData.meetingLink.startsWith('https://')) {
       toast({
-        variant: "warning",
+        variant: "destructive",
         title: "🔗 Invalid Meeting Link",
         description: "Meeting link must start with http:// or https://",
       });
       return;
     }
-    console.log("here 3 ??");
+
     setSending(true);
 
     try {
-      // Use the Next.js API proxy to send email through backend
-      const response = await fetch('/api/mail/send-status-email', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      // Prepare payload - backend expects these exact fields
+      const payload = {
+        candidateEmail: formData.candidateEmail,
+        candidateName: formData.candidateName,
+        hrName: formData.hrName,
+        companyName: formData.companyName,
+        subject: formData.subject,
+        status: formData.status,
+        ...(formData.meetingLink && { meetingLink: formData.meetingLink }),
+        ...(formData.additionalInfo && { additionalInfo: formData.additionalInfo }),
+      };
 
-      // Check if response is JSON
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        // Backend returned HTML or non-JSON response
-        const textResponse = await response.text();
-        console.error("Non-JSON response from server:", textResponse);
-        throw new Error(
-          "Backend API error: The server returned an unexpected response. " +
-          "Please ensure the backend endpoint /send-status-email is properly configured."
-        );
-      }
+      console.log('Sending email with payload:', payload);
 
-      const data = await response.json();
+      // Call backend API to send email
+      const response = await apiClient.post('/mail/send', payload);
 
-      if (response.ok && data.success) {
+      console.log('Email send response:', response.data);
+
+      if (response.data) {
         toast({
-          variant: "success",
           title: "✅ Email Sent Successfully!",
           description: `Your email has been sent to ${formData.candidateName} at ${formData.candidateEmail}`,
         });
         onEmailSent();
         onOpenChange(false);
-      } else {
-        throw new Error(data.error || "Failed to send email");
       }
     } catch (error: any) {
       console.error("Email send error:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
       
-      // Provide more helpful error messages
-      let errorMessage = error.message || "An error occurred while sending the email";
-      
-      if (error.message && error.message.includes("fetch")) {
-        errorMessage = "Cannot connect to backend server. Please ensure the backend is running.";
-      } else if (error.message && error.message.includes("NetworkError")) {
-        errorMessage = "Network error. Please check your internet connection and backend server.";
-      }
+      // Extract detailed error message from backend
+      const errorMessage = 
+        error.response?.data?.error || 
+        error.response?.data?.message || 
+        error.response?.data?.details ||
+        error.message || 
+        "An error occurred while sending the email";
       
       toast({
         variant: "destructive",
@@ -147,78 +210,46 @@ export function EmailComposerDialog({
     }
   };
 
-  // Generate email preview HTML
-  const generateEmailPreview = () => {
-    return `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb;">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">Supersheet</h1>
-        </div>
-        
-        <!-- Main Content -->
-        <div style="background-color: white; padding: 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
-          <h2 style="color: #1f2937; font-size: 24px; margin-bottom: 16px;">Hello ${formData.candidateName || '[Candidate Name]'},</h2>
-          
-          <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-            Congratulations! We are pleased to inform you that you have been shortlisted for the position at ${formData.companyName || '[Company Name]'}.
-          </p>
-          
-          <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-            We were impressed with your application and would like to invite you to the next stage of our hiring process.
-          </p>
-          
-          <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">
-            <strong style="color: #1f2937;">Meeting Link:</strong><br/>
-            <a href="${formData.meetingLink || '#'}" style="color: #3b82f6; text-decoration: none; display: inline-block; margin-top: 8px; padding: 12px 24px; background-color: #eff6ff; border-radius: 6px; font-weight: 500;">
-              Join your meeting here →
-            </a>
-          </p>
-          
-          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 24px 0;">
-            <p style="color: #374151; margin: 0; font-size: 14px; line-height: 1.5;">
-              <strong>💡 Tip:</strong> Please join the meeting 5 minutes early to ensure everything is working properly.
-            </p>
-          </div>
-        </div>
-        
-        <!-- Signature -->
-        <div style="background-color: white; padding: 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 15px; line-height: 1.6; margin-bottom: 8px;">
-            Thank you for your time and interest in ${formData.companyName || '[Company Name]'}.
-          </p>
-          <p style="color: #6b7280; font-size: 15px; margin-bottom: 16px;">Best regards,</p>
-          <p style="color: #1f2937; font-size: 16px; font-weight: 600; margin: 0;">${formData.hrName || '[HR Manager Name]'}</p>
-          <p style="color: #6b7280; font-size: 14px; font-style: italic; margin: 4px 0;">Hiring Manager</p>
-          <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 4px 0;">${formData.companyName || '[Company Name]'}</p>
-        </div>
-        
-        <!-- Footer -->
-        <div style="background-color: #f9fafb; padding: 24px 32px; text-align: center; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb;">
-          <p style="color: #9ca3af; font-size: 13px; margin: 0 0 8px 0;">
-            &copy; 2025 Supersheet. All rights reserved.
-          </p>
-          <a href="https://supersheet.in" style="color: #3b82f6; text-decoration: none; font-size: 13px; font-weight: 500;">
-            Supersheet.in
-          </a>
-        </div>
-      </div>
-    `;
+  // Generate status-specific helper text
+  const getStatusHelp = () => {
+    switch (status) {
+      case "Shortlisted":
+        return "🎉 Congratulations message with optional interview meeting link";
+      case "Interviewed":
+        return "Thank you message with next steps information";
+      case "Rejected":
+        return "Professional rejection with encouragement for future opportunities";
+      case "Hired":
+        return "🎊 Job offer congratulations with welcome message";
+      case "Archived":
+        return "📌 Keep in talent pool for future opportunities";
+      default:
+        return "";
+    }
   };
 
   return (
     <CustomEmailDialog open={open} onOpenChange={onOpenChange}>
       {/* Header */}
       <CustomEmailDialogHeader onClose={() => onOpenChange(false)}>
-        Compose Email
+        Send {status} Email
       </CustomEmailDialogHeader>
 
-      {/* Main Content - Split View */}
+      {/* Main Content */}
       <CustomEmailDialogBody>
         <div className="flex h-full overflow-hidden">
           {/* Left Side - Form Inputs */}
           <div className="w-1/2 border-r overflow-y-auto p-6">
             <div className="space-y-5 max-w-xl">
+              {/* Status Info Banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Status:</strong> {status}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">{getStatusHelp()}</p>
+              </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="candidateName" className="text-sm font-medium">
                   Candidate Name <span className="text-red-500">*</span>
@@ -245,20 +276,22 @@ export function EmailComposerDialog({
                   disabled={sending}
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="subject" className="text-sm font-medium">
-                  Email Subject <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="subject"
-                  value={formData.subject}
-                  onChange={(e) => handleInputChange("subject", e.target.value)}
-                  placeholder="Congratulations! You've been shortlisted"
-                  disabled={sending}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="subject" className="text-sm font-medium">
+                Email Subject <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="subject"
+                value={formData.subject}
+                onChange={(e) => handleInputChange("subject", e.target.value)}
+                placeholder="Email subject"
+                disabled={sending}
+              />
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="hrName" className="text-sm font-medium">
                   Your Name (HR Manager) <span className="text-red-500">*</span>
@@ -284,10 +317,13 @@ export function EmailComposerDialog({
                   disabled={sending}
                 />
               </div>
+            </div>
 
+            {/* Meeting Link - Only for Shortlisted */}
+            {status === "Shortlisted" && (
               <div className="space-y-2">
                 <Label htmlFor="meetingLink" className="text-sm font-medium">
-                  Meeting Link <span className="text-red-500">*</span>
+                  Meeting Link <span className="text-muted-foreground">(Optional)</span>
                 </Label>
                 <Input
                   id="meetingLink"
@@ -297,48 +333,91 @@ export function EmailComposerDialog({
                   disabled={sending}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Google Meet, Zoom, or any video call link
+                  📅 Google Meet, Zoom, or any video call link
                 </p>
               </div>
+            )}
 
-              <div className="pt-4">
-                <Button
-                  onClick={handleSendEmail}
-                  disabled={sending}
-                  className="w-full"
-                  size="lg"
-                >
-                  {sending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send Email
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Side - Email Preview */}
-          <div className="w-1/2 bg-slate-50 overflow-y-auto p-6">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-slate-700 mb-1">Email Preview</h3>
-              <p className="text-xs text-slate-500">This is how the email will look to the candidate</p>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow-sm p-4 border">
-              <div
-                className="email-preview"
-                dangerouslySetInnerHTML={{ __html: generateEmailPreview() }}
+            {/* Additional Info - Optional for all statuses */}
+            <div className="space-y-2">
+              <Label htmlFor="additionalInfo" className="text-sm font-medium">
+                Additional Message <span className="text-muted-foreground">(Optional)</span>
+              </Label>
+              <Textarea
+                id="additionalInfo"
+                value={formData.additionalInfo}
+                onChange={(e) => handleInputChange("additionalInfo", e.target.value)}
+                placeholder="Add any custom message or additional information..."
+                rows={4}
+                disabled={sending}
               />
+              <p className="text-xs text-muted-foreground">
+                This will be included in the email template
+              </p>
+            </div>
+
+            <div className="pt-4">
+              <Button
+                onClick={handleSendEmail}
+                disabled={sending}
+                className="w-full"
+                size="lg"
+              >
+                {sending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send {status} Email
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
+
+        {/* Right Side - Email Preview */}
+        <div className="w-1/2 bg-slate-50 overflow-y-auto p-6">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-slate-700 mb-1">Email Preview</h3>
+            <p className="text-xs text-slate-500">This is how the email will look to the candidate</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border">
+            {loadingPreview ? (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                <span className="ml-2 text-sm text-slate-600">Loading preview...</span>
+              </div>
+            ) : (
+              <div
+                className="email-preview overflow-auto"
+                style={{ 
+                  minHeight: '400px',
+                  maxHeight: '600px'
+                }}
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            )}
+          </div>
+          
+          <style jsx global>{`
+            .email-preview {
+              font-family: Arial, sans-serif;
+            }
+            .email-preview img {
+              max-width: 100%;
+              height: auto;
+            }
+            .email-preview table {
+              border-collapse: collapse;
+            }
+          `}</style>
+        </div>
+      </div>
       </CustomEmailDialogBody>
     </CustomEmailDialog>
   );

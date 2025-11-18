@@ -109,19 +109,27 @@ export default function HRFormsPage() {
       if (!workspaceId) return;
       setIsLoading(true);
       try {
+        // Step 1: Get forms for this workspace
         const response = await apiClient.get(`/forms/workspace/${workspaceId}`);
         const forms = response.data;
+        
         if (forms && forms.length > 0) {
           const formData = forms[0]; // Use the first form found
           setFormId(formData._id);
           setFormTitle(formData.title);
           setFormDescription(formData.description || "");
           setFields(formData.fields);
-          // Assuming submissions are populated or fetched separately if needed
-          // For now, let's check if submissions exist on the formData object
-          setSubmissions(formData.submissions || []); 
           setFormExists(true);
           setIsFormLocked(true);
+          
+          // Step 2: Fetch submissions for this form
+          try {
+            const submissionsResponse = await apiClient.get(`/forms/${formData._id}/submissions`);
+            setSubmissions(submissionsResponse.data.submissions || []); 
+          } catch (submissionError) {
+            console.log("No submissions found for this form.", submissionError);
+            setSubmissions([]);
+          }
         } else {
           setFormExists(false);
         }
@@ -216,10 +224,10 @@ export default function HRFormsPage() {
 
   const handleFinalizeForm = async () => {
     const form = {
+      workspaceId: workspaceId,
       title: formTitle,
       description: formDescription,
       fields: fields,
-      workspaceId: workspaceId,
     };
 
     try {
@@ -235,9 +243,9 @@ export default function HRFormsPage() {
   }
 
   const handleApprove = async (submissionId: string) => {
-    if (!workspaceId) return;
+    if (!workspaceId || !formId) return;
     try {
-      await apiClient.post(`/submissions/${submissionId}/approve`, { workspaceId });
+      await apiClient.post(`/forms/${formId}/submissions/${submissionId}/add-to-workspace`);
       setSubmissions(submissions.filter(s => s._id !== submissionId));
       setSelectedSubmission(null);
     } catch (error) {
@@ -246,8 +254,9 @@ export default function HRFormsPage() {
   };
 
   const handleDeny = async (submissionId: string) => {
+    if (!formId) return;
     try {
-      await apiClient.delete(`/submissions/${submissionId}/deny`);
+      await apiClient.delete(`/forms/${formId}/submissions/${submissionId}`);
       setSubmissions(submissions.filter(s => s._id !== submissionId));
       setSelectedSubmission(null);
     } catch (error) {
