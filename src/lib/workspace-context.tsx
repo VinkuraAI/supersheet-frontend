@@ -8,10 +8,16 @@ interface Workspace {
   _id: string;
   name: string;
   userId: string;
+  members?: {
+    user: string;
+    role: "owner" | "admin" | "editor" | "viewer";
+  }[];
 }
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
+  ownedWorkspaces: Workspace[];
+  sharedWorkspaces: Workspace[];
   setWorkspaces: React.Dispatch<React.SetStateAction<Workspace[]>>;
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
@@ -25,6 +31,8 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefin
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [ownedWorkspaces, setOwnedWorkspaces] = useState<Workspace[]>([]);
+  const [sharedWorkspaces, setSharedWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspace, setSelectedWorkspaceState] = useState<Workspace | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -42,15 +50,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const response = await apiClient.get<Workspace[]>("/workspaces");
-        const fetchedWorkspaces = response.data;
-        setWorkspaces(fetchedWorkspaces);
+        const response = await apiClient.get<{ ownedWorkspaces: Workspace[], sharedWorkspaces: Workspace[] }>("/workspaces");
+        const { ownedWorkspaces: owned, sharedWorkspaces: shared } = response.data;
+        
+        setOwnedWorkspaces(owned);
+        setSharedWorkspaces(shared);
+        
+        // Combine both for the workspaces array (for backward compatibility)
+        const allWorkspaces = [...owned, ...shared];
+        setWorkspaces(allWorkspaces);
 
         const pathSegments = pathname.split('/');
         const workspaceIdFromUrl = pathSegments.length > 2 && pathSegments[1] === 'workspace' ? pathSegments[2] : null;
 
         if (workspaceIdFromUrl) {
-          const found = fetchedWorkspaces.find(w => w._id === workspaceIdFromUrl);
+          const found = allWorkspaces.find(w => w._id === workspaceIdFromUrl);
           setSelectedWorkspaceState(found || null);
         } else {
           const isAuthPage = pathname.startsWith('/auth');
@@ -62,10 +76,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           const isWorkspaceReportsPage = pathname === '/workspace/reports';
 
           if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isDashboardPage && !isRootPage && !isReportsPage && !isWorkspaceReportsPage) {
-            if (fetchedWorkspaces.length > 0) {
-              router.push('/dashboard');
-            } else {
+            // Only redirect to welcome if user has NO workspaces (neither owned nor shared)
+            if (owned.length === 0 && shared.length === 0) {
               router.push('/welcome');
+            } else if (allWorkspaces.length > 0) {
+              router.push('/dashboard');
             }
           }
         }
@@ -79,6 +94,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           // User is not authenticated, silently handle it
           localStorage.removeItem("user");
           setWorkspaces([]);
+          setOwnedWorkspaces([]);
+          setSharedWorkspaces([]);
           setSelectedWorkspaceState(null);
           // Only log in development mode
           if (process.env.NODE_ENV === 'development') {
@@ -106,12 +123,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const maxWorkspaces = 2;
-  const workspaceCount = workspaces.length;
+  const workspaceCount = ownedWorkspaces.length; // Only count owned workspaces for creation limit
   const canCreateWorkspace = workspaceCount < maxWorkspaces;
 
   return (
     <WorkspaceContext.Provider value={{ 
       workspaces, 
+      ownedWorkspaces,
+      sharedWorkspaces,
       setWorkspaces, 
       selectedWorkspace, 
       setSelectedWorkspace, 

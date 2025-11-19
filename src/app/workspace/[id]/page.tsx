@@ -67,6 +67,7 @@ import { FileText, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import apiClient from "@/utils/api.client";
 import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog";
+import { ShareWorkspaceDialog } from "@/components/share-workspace-dialog";
 
 function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen, isMobile }: PageContentProps) {
   const { selectedWorkspace, isLoading, workspaces, setSelectedWorkspace } = useWorkspace();
@@ -195,6 +196,10 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
                           Documents
                         </Button>
                       </Link>
+                      <ShareWorkspaceDialog 
+                        workspaceId={selectedWorkspace._id}
+                        workspaceName={selectedWorkspace.name}
+                      />
                       <Link href={`/workspace/${selectedWorkspace._id}/forms`}>
                         <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                           <FileText className="mr-1.5 h-3 w-3" />

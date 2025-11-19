@@ -49,17 +49,9 @@ export default function LoginForm() {
     try {
       await login(formData.email, formData.password);
       
-      // Check if user has workspaces before redirecting
-      const { default: apiClient } = await import('@/utils/api.client');
-      const response = await apiClient.get('/workspaces');
-      const workspaces = response.data;
-      
-      // Redirect based on workspace count
-      if (workspaces && workspaces.length > 0) {
-        router.push('/dashboard');
-      } else {
-        router.push('/welcome');
-      }
+      // Navigate to dashboard and let WorkspaceContext handle the redirect logic
+      // It will redirect to /welcome if no workspaces exist (owned or shared)
+      router.push('/dashboard');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";
       

@@ -240,28 +240,29 @@ const CreateWorkspaceCard = ({ canCreate }: { canCreate: boolean }) => {
 };
 
 function DashboardPage() {
-  const { workspaces, isLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
+  const { workspaces, ownedWorkspaces, sharedWorkspaces, isLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
   const router = useRouter();
   const hasCheckedRef = useRef(false);
 
   useEffect(() => {
-    console.log("DashboardPage useEffect - workspaces.length:", workspaces.length, "isLoading:", isLoading, "hasChecked:", hasCheckedRef.current);
+    console.log("DashboardPage useEffect - ownedWorkspaces:", ownedWorkspaces.length, "sharedWorkspaces:", sharedWorkspaces.length, "isLoading:", isLoading, "hasChecked:", hasCheckedRef.current);
     
     if (!hasCheckedRef.current && !isLoading) {
       const timer = setTimeout(() => {
         hasCheckedRef.current = true;
         
-        if (workspaces.length === 0) {
-          console.log("No workspaces found after delay, redirecting to /welcome");
+        // Only redirect to welcome if user has NO workspaces (neither owned nor shared)
+        if (ownedWorkspaces.length === 0 && sharedWorkspaces.length === 0) {
+          console.log("No workspaces found (owned or shared) after delay, redirecting to /welcome");
           router.push('/welcome');
         } else {
-          console.log("Found", workspaces.length, "workspace(s), staying on dashboard");
+          console.log("Found", ownedWorkspaces.length, "owned and", sharedWorkspaces.length, "shared workspace(s), staying on dashboard");
         }
       }, 100);
       
       return () => clearTimeout(timer);
     }
-  }, [isLoading, workspaces.length, router, workspaces]);
+  }, [isLoading, ownedWorkspaces.length, sharedWorkspaces.length, router, ownedWorkspaces, sharedWorkspaces]);
 
   if (isLoading) {
     return (
@@ -329,7 +330,7 @@ function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Workspaces Grid */}
+      {/* Your Workspaces Section */}
       <div>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -338,15 +339,64 @@ function DashboardPage() {
           className="mb-6"
         >
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Your Workspaces</h2>
-          <p className="text-slate-600">Select a workspace to continue working</p>
+          <p className="text-slate-600">Workspaces created by you</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {workspaces.map((ws, index) => (
-            <WorkspaceCard key={ws._id} workspace={ws} index={index} />
-          ))}
-          <CreateWorkspaceCard canCreate={canCreateWorkspace} />
-        </div>
+        {ownedWorkspaces.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center"
+          >
+            <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-4">
+              <FolderOpen className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-slate-600 text-lg font-medium mb-2">You don't have your own workspace</p>
+            <p className="text-slate-500 text-sm">Create your first workspace to get started</p>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ownedWorkspaces.map((ws, index) => (
+              <WorkspaceCard key={ws._id} workspace={ws} index={index} />
+            ))}
+            <CreateWorkspaceCard canCreate={canCreateWorkspace} />
+          </div>
+        )}
+      </div>
+
+      {/* Shared Workspaces Section */}
+      <div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="mb-6"
+        >
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Shared Workspaces to You</h2>
+          <p className="text-slate-600">Workspaces shared with you by others</p>
+        </motion.div>
+
+        {sharedWorkspaces.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center"
+          >
+            <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-4">
+              <Briefcase className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-slate-600 text-lg font-medium mb-2">No shared workspaces yet</p>
+            <p className="text-slate-500 text-sm">Till now no one has shared workspaces to you</p>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sharedWorkspaces.map((ws, index) => (
+              <WorkspaceCard key={ws._id} workspace={ws} index={index} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
