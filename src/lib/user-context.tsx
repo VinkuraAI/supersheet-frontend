@@ -38,8 +38,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error('Failed to fetch user data', error);
       
-      // Handle 401 Unauthorized - clear stored user data
-      if (error.response?.status === 401) {
+      // Handle 401 Unauthorized or 403 Forbidden - clear stored user data
+      if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem("user");
         setUser(null);
       } else {

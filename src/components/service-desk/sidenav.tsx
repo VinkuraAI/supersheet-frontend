@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { ChevronDown, Pencil, Trash2, Plus, FileText } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, Pencil, Trash2, Plus, FileText, Settings, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import apiClient from "@/utils/api.client";
+import { Role } from "@/utils/permissions";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -27,14 +29,15 @@ import { useWorkspace } from "@/lib/workspace-context";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { CreateWorkspaceDialog } from "@/components/dialogs/create-workspace-dialog";
+import { ShareWorkspaceDialog } from "@/components/dialogs/share-workspace-dialog";
 
 interface Workspace {
   _id: string;
   name: string;
   userId: string;
   members?: {
-    user: string;
-    role: "owner" | "admin" | "editor" | "viewer";
+    user: string | { _id: string; name: string; email: string };
+    role: Role;
   }[];
 }
 
@@ -73,6 +76,7 @@ const initialSections = [
 ];
 
 export function SideNav() {
+  const router = useRouter();
   const { user } = useAuth();
   const {
     workspaces,
@@ -119,7 +123,7 @@ export function SideNav() {
     if (workspaceForms[workspaceId]) return; // Already fetched
 
     try {
-      const response = await apiClient.get(`/forms/workspace/${workspaceId}`);
+      const response = await apiClient.get(`/workspaces/${workspaceId}/forms`);
       setWorkspaceForms((prev) => ({
         ...prev,
         [workspaceId]: response.data || [],
@@ -245,9 +249,16 @@ export function SideNav() {
   };
 
   // Helper function to get user's role in a workspace
-  const getUserRole = (workspace: Workspace): "owner" | "admin" | "editor" | "viewer" | null => {
+  const getUserRole = (workspace: Workspace): Role | null => {
     if (!user?.id || !workspace.members) return null;
-    const member = workspace.members.find((m) => m.user === user.id);
+
+    // Check if user is the owner (userId field)
+    if (workspace.userId === user.id) return 'owner';
+
+    const member = workspace.members.find((m) => {
+      const memberId = typeof m.user === 'string' ? m.user : m.user._id;
+      return memberId === user.id;
+    });
     return member?.role || null;
   };
 
@@ -396,6 +407,24 @@ export function SideNav() {
                                       </div>
                                     </ContextMenuTrigger>
                                     <ContextMenuContent>
+                                      {/* Settings - owner, admin, editor */}
+                                      {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
+                                        <ContextMenuItem onClick={() => router.push(`/workspace/${workspace._id}/settings`)}>
+                                          <Settings className="mr-2 h-4 w-4" />
+                                          Settings
+                                        </ContextMenuItem>
+                                      )}
+
+                                      {/* Share - owner, admin */}
+                                      {canPerformAction(workspace, ["owner", "admin"]) && (
+                                        <ShareWorkspaceDialog workspace={workspace} canManageMembers={true}>
+                                          <ContextMenuItem onSelect={(e) => e.preventDefault()}>
+                                            <Share2 className="mr-2 h-4 w-4" />
+                                            Share
+                                          </ContextMenuItem>
+                                        </ShareWorkspaceDialog>
+                                      )}
+
                                       {/* Add Form - owner, admin, editor */}
                                       {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
                                         <ContextMenuItem
@@ -440,6 +469,7 @@ export function SideNav() {
                                           Delete Workspace
                                         </ContextMenuItem>
                                       )}
+
                                     </ContextMenuContent>
                                   </ContextMenu>
 
@@ -447,7 +477,7 @@ export function SideNav() {
                                   {expandedWorkspaces.has(workspace._id) && (
                                     <div className="pl-6 pt-1 space-y-0.5">
                                       {workspaceForms[workspace._id] ===
-                                      undefined ? (
+                                        undefined ? (
                                         <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
                                           Loading forms...
                                         </p>
@@ -556,6 +586,24 @@ export function SideNav() {
                                     </div>
                                   </ContextMenuTrigger>
                                   <ContextMenuContent>
+                                    {/* Settings - owner, admin, editor */}
+                                    {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
+                                      <ContextMenuItem onClick={() => router.push(`/workspace/${workspace._id}/settings`)}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        Settings
+                                      </ContextMenuItem>
+                                    )}
+
+                                    {/* Share - owner, admin */}
+                                    {canPerformAction(workspace, ["owner", "admin"]) && (
+                                      <ShareWorkspaceDialog workspace={workspace} canManageMembers={true}>
+                                        <ContextMenuItem onSelect={(e) => e.preventDefault()}>
+                                          <Share2 className="mr-2 h-4 w-4" />
+                                          Share
+                                        </ContextMenuItem>
+                                      </ShareWorkspaceDialog>
+                                    )}
+
                                     {/* Add Form - owner, admin, editor */}
                                     {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
                                       <ContextMenuItem
@@ -588,6 +636,7 @@ export function SideNav() {
                                         Rename
                                       </ContextMenuItem>
                                     )}
+
                                   </ContextMenuContent>
                                 </ContextMenu>
 
@@ -595,7 +644,7 @@ export function SideNav() {
                                 {expandedWorkspaces.has(workspace._id) && (
                                   <div className="pl-6 pt-1 space-y-0.5">
                                     {workspaceForms[workspace._id] ===
-                                    undefined ? (
+                                      undefined ? (
                                       <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
                                         Loading forms...
                                       </p>

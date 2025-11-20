@@ -19,7 +19,6 @@ interface ValidationError {
 export default function SignupForm() {
   const [formData, setFormData] = useState({
     name: "",
-    userName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -55,12 +54,6 @@ export default function SignupForm() {
       newErrors.name = "Name is required";
     } else if (formData.name.trim().length < 3) {
       newErrors.name = "Name must be at least 3 characters";
-    }
-    
-    if (!formData.userName.trim()) {
-      newErrors.userName = "User name is required";
-    } else if (formData.userName.trim().length < 2) {
-      newErrors.userName = "User name must be at least 2 characters";
     }
     
     if (!formData.email.trim()) {
@@ -116,7 +109,6 @@ export default function SignupForm() {
       // Clear form
       setFormData({
         name: "",
-        userName: "",
         email: "",
         password: "",
         confirmPassword: "",
@@ -139,9 +131,9 @@ export default function SignupForm() {
             const fieldName = err.path;
             const errorMessage = err.msg;
             
-            // Map 'name' field from backend to 'userName' in frontend
+            // Map 'name' field from backend to 'name' in frontend
             if (fieldName === 'name') {
-              newErrors.userName = errorMessage;
+              newErrors.name = errorMessage;
             } else if (fieldName === 'email') {
               newErrors.email = errorMessage;
             } else if (fieldName === 'password') {
@@ -171,7 +163,7 @@ export default function SignupForm() {
           } else if (errorMessage.toLowerCase().includes("password")) {
             setErrors({ password: errorMessage });
           } else if (errorMessage.toLowerCase().includes("name")) {
-            setErrors({ userName: errorMessage });
+            setErrors({ name: errorMessage });
           } else {
             // Show as general error if we can't map it to a specific field
             setGeneralError(errorMessage);
@@ -335,7 +327,7 @@ export default function SignupForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Fields */}
-        <div className="grid grid-cols-2 gap-4">
+        <div>
           {/* Full Name Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -378,50 +370,6 @@ export default function SignupForm() {
               </motion.div>
             )}
           </div>
-
-          {/* Username Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              User Name
-            </label>
-            <div className="relative">
-              <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors ${
-                errors.userName ? 'text-red-500' : 'text-gray-400'
-              }`} />
-              <input
-                name="userName"
-                type="text"
-                value={formData.userName}
-                onChange={handleInputChange}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg outline-none transition-all placeholder:text-gray-500 ${
-                  errors.userName 
-                    ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
-                    : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                }`}
-                placeholder="Enter your user name"
-              />
-              {errors.userName && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                </div>
-              )}
-            </div>
-            {errors.userName && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-start gap-1.5 mt-2 text-red-600"
-              >
-                <div className="flex-shrink-0 mt-0.5">
-                  <div className="w-1 h-1 rounded-full bg-red-500" />
-                </div>
-                <p className="text-sm font-medium leading-tight">
-                  {errors.userName}
-                </p>
-              </motion.div>
-            )}
-          </div>
-
         </div>
 
         {/* Email Field */}

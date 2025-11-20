@@ -49,6 +49,7 @@ interface Submission {
   candidateData: Record<string, string>
   resumeUrl: string;
   createdAt: string;
+  status?: 'Pending' | 'Approved' | 'Denied';
   extractedData?: {
     Name: string;
     Email: string;
@@ -110,7 +111,7 @@ export default function HRFormsPage() {
       setIsLoading(true);
       try {
         // Step 1: Get forms for this workspace
-        const response = await apiClient.get(`/forms/workspace/${workspaceId}`);
+        const response = await apiClient.get(`/workspaces/${workspaceId}/forms`);
         const forms = response.data;
         
         if (forms && forms.length > 0) {
@@ -231,7 +232,7 @@ export default function HRFormsPage() {
     };
 
     try {
-      const response = await apiClient.post("/forms", form);
+      const response = await apiClient.post(`/workspaces/${workspaceId}/forms`, form);
       setFormId(response.data._id); // Save the new form ID
       setIsFormLocked(true)
       setIsBuilding(false)
@@ -245,9 +246,19 @@ export default function HRFormsPage() {
   const handleApprove = async (submissionId: string) => {
     if (!workspaceId || !formId) return;
     try {
-      await apiClient.post(`/forms/${formId}/submissions/${submissionId}/add-to-workspace`);
-      setSubmissions(submissions.filter(s => s._id !== submissionId));
-      setSelectedSubmission(null);
+      await apiClient.post(`/forms/${formId}/submissions/${submissionId}/add-to-workspace`, {
+        source: "Form"
+      });
+      
+      // Update local state to reflect Approved status
+      setSubmissions(prev => prev.map(s => 
+        s._id === submissionId ? { ...s, status: 'Approved' } : s
+      ));
+      
+      // Update selected submission if it's the one being approved
+      if (selectedSubmission?._id === submissionId) {
+        setSelectedSubmission(prev => prev ? { ...prev, status: 'Approved' } : null);
+      }
     } catch (error) {
       console.error("Failed to approve submission:", error);
     }
@@ -256,11 +267,36 @@ export default function HRFormsPage() {
   const handleDeny = async (submissionId: string) => {
     if (!formId) return;
     try {
-      await apiClient.delete(`/forms/${formId}/submissions/${submissionId}`);
-      setSubmissions(submissions.filter(s => s._id !== submissionId));
-      setSelectedSubmission(null);
+      await apiClient.post(`/forms/${formId}/submissions/${submissionId}/deny`);
+      
+      // Update local state to reflect Denied status
+      setSubmissions(prev => prev.map(s => 
+        s._id === submissionId ? { ...s, status: 'Denied' } : s
+      ));
+
+      // Update selected submission if it's the one being denied
+      if (selectedSubmission?._id === submissionId) {
+        setSelectedSubmission(prev => prev ? { ...prev, status: 'Denied' } : null);
+      }
     } catch (error) {
       console.error("Failed to deny submission:", error);
+    }
+  };
+
+  const handleDeleteSubmission = async (submissionId: string) => {
+    if (!formId) return;
+    if (!confirm("Are you sure you want to permanently delete this submission?")) {
+      return;
+    }
+
+    try {
+      await apiClient.delete(`/forms/${formId}/submissions/${submissionId}`);
+      setSubmissions(submissions.filter(s => s._id !== submissionId));
+      if (selectedSubmission?._id === submissionId) {
+        setSelectedSubmission(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete submission:", error);
     }
   };
 
@@ -517,6 +553,7 @@ export default function HRFormsPage() {
                         <TableHeader>
                         <TableRow>
                             <TableHead className="text-xs">Candidate</TableHead>
+                            <TableHead className="text-xs">Status</TableHead>
                             <TableHead className="text-xs">Submitted At</TableHead>
                             <TableHead className="text-xs">Actions</TableHead>
                         </TableRow>
@@ -531,19 +568,37 @@ export default function HRFormsPage() {
                             <TableCell className="font-medium">
                               {submission.extractedData ? (submission.extractedData.Name ? submission.extractedData.Name : 'Anonymous') : 'Anonymous'}
                             </TableCell>
+                            <TableCell>
+                              <Badge variant={submission.status === 'Approved' ? 'default' : submission.status === 'Denied' ? 'destructive' : 'secondary'} className="text-[0.65rem]">
+                                {submission.status || 'Pending'}
+                              </Badge>
+                            </TableCell>
                             <TableCell>{new Date(submission.createdAt).toLocaleString()}</TableCell>
                             <TableCell>
-                                <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-6 px-2 text-xs"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedSubmission(submission)
-                                }}
-                                >
-                                View Details
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setSelectedSubmission(submission)
+                                    }}
+                                    >
+                                    View Details
+                                    </Button>
+                                    <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleDeleteSubmission(submission._id)
+                                    }}
+                                    >
+                                    <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                </div>
                             </TableCell>
                             </TableRow>
                         ))}
@@ -636,8 +691,19 @@ export default function HRFormsPage() {
                       </div>
                   )}
                   <DialogFooter>
-                    <Button variant="outline" className="h-7 px-2 text-xs" onClick={() => handleDeny(selectedSubmission._id)}>Deny</Button>
-                    <Button className="h-7 px-2 text-xs" onClick={() => handleApprove(selectedSubmission._id)}>Approve</Button>
+                    {(!selectedSubmission.status || selectedSubmission.status === 'Pending') ? (
+                      <>
+                        <Button variant="outline" className="h-7 px-2 text-xs" onClick={() => handleDeny(selectedSubmission._id)}>Deny</Button>
+                        <Button className="h-7 px-2 text-xs" onClick={() => handleApprove(selectedSubmission._id)}>Approve</Button>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Status:</span>
+                        <Badge variant={selectedSubmission.status === 'Approved' ? 'default' : 'destructive'}>
+                          {selectedSubmission.status}
+                        </Badge>
+                      </div>
+                    )}
                   </DialogFooter>
                 </div>
               )}

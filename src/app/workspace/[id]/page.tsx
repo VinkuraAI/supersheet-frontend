@@ -1,5 +1,5 @@
 "use client"
-import { Suspense, useState, useEffect} from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { TopBar } from "@/components/service-desk/topbar"
 import { SideNav } from "@/components/service-desk/sidenav"
@@ -13,6 +13,13 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { NoWorkspaceSelected } from "@/components/service-desk/no-workspace-selected";
 import { useWorkspace } from "@/lib/workspace-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { FileText, FolderOpen, Share2 } from "lucide-react";
+import Link from "next/link";
+import apiClient from "@/utils/api.client";
+import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog";
+import { ShareWorkspaceDialog } from "@/components/dialogs/share-workspace-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function WorkspacePage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
@@ -23,7 +30,7 @@ export default function WorkspacePage() {
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth
-      
+
       if (width < 1272) {
         setLeftSidebarOpen(false)
         setRightSidebarOpen(false)
@@ -44,11 +51,11 @@ export default function WorkspacePage() {
   }, [])
 
   return (
-    <PageContent 
-      leftSidebarOpen={leftSidebarOpen} 
-      rightSidebarOpen={rightSidebarOpen} 
-      setLeftSidebarOpen={setLeftSidebarOpen} 
-      setRightSidebarOpen={setRightSidebarOpen} 
+    <PageContent
+      leftSidebarOpen={leftSidebarOpen}
+      rightSidebarOpen={rightSidebarOpen}
+      setLeftSidebarOpen={setLeftSidebarOpen}
+      setRightSidebarOpen={setRightSidebarOpen}
       isMobile={isMobile}
     />
   )
@@ -62,21 +69,25 @@ interface PageContentProps {
   isMobile: boolean;
 }
 
-import { Button } from "@/components/ui/button";
-import { FileText, FolderOpen } from "lucide-react";
-import Link from "next/link";
-import apiClient from "@/utils/api.client";
-import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog";
-import { ShareWorkspaceDialog } from "@/components/share-workspace-dialog";
-
 function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, setRightSidebarOpen, isMobile }: PageContentProps) {
   const { selectedWorkspace, isLoading, workspaces, setSelectedWorkspace } = useWorkspace();
+  const { toast } = useToast();
   const params = useParams();
   const workspaceId = params.id as string;
   const [rows, setRows] = useState<any[]>([]);
   const [initialRows, setInitialRows] = useState<any[]>([]);
   const [schema, setSchema] = useState<any[]>([]);
   const [workspaceData, setWorkspaceData] = useState<any>(null);
+
+  // Sync selectedWorkspace with URL params
+  useEffect(() => {
+    if (workspaceId && workspaces.length > 0 && (!selectedWorkspace || selectedWorkspace._id !== workspaceId)) {
+      const workspace = workspaces.find(w => w._id === workspaceId);
+      if (workspace) {
+        setSelectedWorkspace(workspace);
+      }
+    }
+  }, [workspaceId, workspaces, selectedWorkspace, setSelectedWorkspace]);
 
   useEffect(() => {
     if (selectedWorkspace) {
@@ -85,18 +96,18 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
   }, [selectedWorkspace]);
 
   const fetchWorkspaceData = async () => {
-    if (!selectedWorkspace) return;
-    
+    if (!selectedWorkspace?._id) return;
+
     try {
       const response = await apiClient.get(`/workspaces/${selectedWorkspace._id}`);
       setRows(response.data.table.rows || []);
-      
+
       // Deduplicate schema by column name, keeping the first occurrence
       const rawSchema = response.data.table.schema || [];
-      const uniqueSchema = rawSchema.filter((col: any, index: number, self: any[]) => 
+      const uniqueSchema = rawSchema.filter((col: any, index: number, self: any[]) =>
         index === self.findIndex((c: any) => c.name === col.name)
       );
-      
+
       // Add Informed column if it doesn't exist
       if (!uniqueSchema.find((col: any) => col.name === "Informed")) {
         const statusIndex = uniqueSchema.findIndex((col: any) => col.name === "Status");
@@ -125,12 +136,20 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
           required: false
         });
       }
-      
+
       setSchema(uniqueSchema);
-      
+
       setWorkspaceData(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch workspace data:", error);
+      if (error.response?.status === 403) {
+        // Handle forbidden access
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You do not have permission to view this workspace.",
+        });
+      }
     }
   };
 
@@ -196,10 +215,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
                           Documents
                         </Button>
                       </Link>
-                      <ShareWorkspaceDialog 
-                        workspaceId={selectedWorkspace._id}
-                        workspaceName={selectedWorkspace.name}
-                      />
+
                       <Link href={`/workspace/${selectedWorkspace._id}/forms`}>
                         <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                           <FileText className="mr-1.5 h-3 w-3" />
@@ -216,9 +232,9 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
                 </div>
 
                 <div className="bg-card border rounded-md flex-1 min-h-0 flex flex-col h-full">
-                  <TicketsTable 
-                    tickets={rows} 
-                    schema={schema} 
+                  <TicketsTable
+                    tickets={rows}
+                    schema={schema}
                     setData={setRows}
                     onRefreshData={fetchWorkspaceData}
                   />
@@ -250,3 +266,4 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
     </main>
   )
 }
+

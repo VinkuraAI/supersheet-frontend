@@ -41,13 +41,16 @@ import {
   User,
   FolderOpen,
   FileText,
-  BarChart3
+  BarChart3,
+  Share2,
+  Settings
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useWorkspace } from "@/lib/workspace-context"
 import { useUser } from "@/lib/user-context"
 import apiClient from "@/utils/api.client"
+import { ShareWorkspaceDialog } from "@/components/dialogs/share-workspace-dialog"
 
 interface TopBarProps {
   onToggleLeftSidebar: () => void
@@ -118,7 +121,7 @@ const getInitials = (name: string) => {
 
 export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebarOpen }: TopBarProps) {
   const router = useRouter()
-  const { selectedWorkspace, isLoading: isWorkspaceLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace()
+  const { selectedWorkspace, isLoading: isWorkspaceLoading, canCreateWorkspace, workspaceCount, maxWorkspaces, permissions } = useWorkspace()
   const { user, isLoading: isUserLoading } = useUser()
   const [avatarColor, setAvatarColor] = useState("")
 
@@ -242,6 +245,33 @@ export function TopBar({ onToggleLeftSidebar, onToggleRightSidebar, rightSidebar
 
       {/* Actions */}
       <div className="flex items-center gap-1">
+        {/* Share Button - Only if workspace is selected and user has permission */}
+        {selectedWorkspace && permissions.canManageMembers && (
+          <ShareWorkspaceDialog>
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="h-8 px-4 text-sm font-medium mr-1" 
+            >
+              <Share2 className="h-4 w-4 mr-1" />
+              Share
+            </Button>
+          </ShareWorkspaceDialog>
+        )}
+
+        {/* Settings Button */}
+        {selectedWorkspace && permissions.canDeleteWorkspace && (
+          <Button 
+            size="sm" 
+            variant="ghost"
+            className="h-8 w-8 px-0" 
+            onClick={() => router.push(`/workspace/${selectedWorkspace._id}/settings`)}
+            title="Workspace Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        )}
+
         {/* Create Button */}
         <Button 
           size="sm" 

@@ -108,6 +108,7 @@ export function AddCandidateDialog({
     uploadFiles.forEach(uploadFile => {
         formData.append("resume", uploadFile.file);
     });
+    formData.append("source", "Upload");
 
     try {
         setUploadFiles(prev => prev.map(f => ({ ...f, status: 'uploading', progress: 0 })));

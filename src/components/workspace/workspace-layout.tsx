@@ -24,7 +24,7 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth
-      
+
       if (width < 1272) {
         setLeftSidebarOpen(false)
         setRightSidebarOpen(false)
@@ -45,11 +45,11 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   }, [])
 
   return (
-    <PageContent 
-      leftSidebarOpen={leftSidebarOpen} 
-      rightSidebarOpen={rightSidebarOpen} 
-      setLeftSidebarOpen={setLeftSidebarOpen} 
-      setRightSidebarOpen={setRightSidebarOpen} 
+    <PageContent
+      leftSidebarOpen={leftSidebarOpen}
+      rightSidebarOpen={rightSidebarOpen}
+      setLeftSidebarOpen={setLeftSidebarOpen}
+      setRightSidebarOpen={setRightSidebarOpen}
       isMobile={isMobile}
     >
       {children}
@@ -66,13 +66,13 @@ interface PageContentProps {
   children: ReactNode
 }
 
-function PageContent({ 
-  leftSidebarOpen, 
-  rightSidebarOpen, 
-  setLeftSidebarOpen, 
-  setRightSidebarOpen, 
+function PageContent({
+  leftSidebarOpen,
+  rightSidebarOpen,
+  setLeftSidebarOpen,
+  setRightSidebarOpen,
   isMobile,
-  children 
+  children
 }: PageContentProps) {
   const { selectedWorkspace, isLoading } = useWorkspace()
   const params = useParams()
@@ -123,7 +123,7 @@ function PageContent({
         </aside>
 
         {/* Main content area */}
-        <div 
+        <div
           className={`
             flex-1 transition-all duration-200 ease-in-out overflow-hidden
             ${leftSidebarOpen && !isMobile ? 'ml-[195px]' : 'ml-0'}
@@ -145,8 +145,8 @@ function PageContent({
         </aside>
       </section>
 
-      {/* AI Chat Widget */}
-      <AiChatWidget />
+      {/* AI Chat Widget - Hide on settings page */}
+      {!params.id?.includes('settings') && typeof window !== 'undefined' && !window.location.pathname.includes('/settings') && <AiChatWidget />}
     </main>
   )
 }

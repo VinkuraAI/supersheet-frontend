@@ -49,17 +49,20 @@ async function proxyRequest(
 ) {
   const path = pathSegments.join('/');
   const url = `${BACKEND_URL}/${path}`;
-  
+
   // Forward cookies from the browser request to the backend
   const cookies = request.headers.get('cookie');
   const contentType = request.headers.get('content-type');
 
   // Handle multipart/form-data (file uploads)
   const isMultipart = contentType?.includes('multipart/form-data');
-  
+
   let body;
   const headers: Record<string, string> = {
     ...(cookies && { Cookie: cookies }),
+    ...(request.headers.get('x-csrf-token') && { 'x-csrf-token': request.headers.get('x-csrf-token')! }),
+    ...(request.headers.get('origin') && { 'Origin': request.headers.get('origin')! }),
+    ...(request.headers.get('referer') && { 'Referer': request.headers.get('referer')! }),
   };
 
   if (method !== 'GET' && method !== 'DELETE') {
