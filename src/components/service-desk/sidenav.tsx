@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Pencil, Trash2, Plus, FileText, Settings, Share2 } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import apiClient from "@/utils/api.client";
+// import apiClient from "@/utils/api.client"; // Removed
 import { Role } from "@/utils/permissions";
 import {
   ContextMenu,
@@ -31,21 +31,9 @@ import { toast } from "sonner";
 import { CreateWorkspaceDialog } from "@/components/dialogs/create-workspace-dialog";
 import { ShareWorkspaceDialog } from "@/components/dialogs/share-workspace-dialog";
 
-interface Workspace {
-  _id: string;
-  name: string;
-  userId: string;
-  members?: {
-    user: string | { _id: string; name: string; email: string };
-    role: Role;
-  }[];
-}
-
-interface WorkspaceForm {
-  _id: string;
-  title: string;
-  workspaceId: string;
-}
+import { WorkspaceItem } from "./workspace-item";
+import { useUpdateWorkspace, useDeleteWorkspace } from "@/features/workspace/hooks/use-workspaces";
+import { Workspace } from "@/features/workspace/services/workspace-service";
 
 const initialSections = [
   {
@@ -82,7 +70,6 @@ export function SideNav() {
     workspaces,
     ownedWorkspaces,
     sharedWorkspaces,
-    setWorkspaces,
     selectedWorkspace,
     setSelectedWorkspace,
     isLoading,
@@ -90,14 +77,13 @@ export function SideNav() {
     workspaceCount,
     maxWorkspaces,
   } = useWorkspace();
+
+  const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
+  const { mutateAsync: deleteWorkspace } = useDeleteWorkspace();
+
   const [isOwnWorkspacesOpen, setIsOwnWorkspacesOpen] = useState(true);
   const [isSharedWorkspacesOpen, setIsSharedWorkspacesOpen] = useState(true);
-  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(
-    new Set()
-  );
-  const [workspaceForms, setWorkspaceForms] = useState<
-    Record<string, WorkspaceForm[]>
-  >({});
+
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(
     null
   );
@@ -117,44 +103,6 @@ export function SideNav() {
       inputRef.current.focus();
     }
   }, [editingWorkspaceId]);
-
-  // Fetch forms for a workspace when it's expanded
-  const fetchWorkspaceForms = async (workspaceId: string) => {
-    if (workspaceForms[workspaceId]) return; // Already fetched
-
-    try {
-      const response = await apiClient.get(`/workspaces/${workspaceId}/forms`);
-      setWorkspaceForms((prev) => ({
-        ...prev,
-        [workspaceId]: response.data || [],
-      }));
-    } catch (error) {
-      console.error(
-        `Failed to fetch forms for workspace ${workspaceId}:`,
-        error
-      );
-      setWorkspaceForms((prev) => ({
-        ...prev,
-        [workspaceId]: [],
-      }));
-    }
-  };
-
-  const toggleWorkspaceExpansion = (
-    workspaceId: string,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation(); // Prevent navigation when clicking chevron
-
-    const newExpanded = new Set(expandedWorkspaces);
-    if (newExpanded.has(workspaceId)) {
-      newExpanded.delete(workspaceId);
-    } else {
-      newExpanded.add(workspaceId);
-      fetchWorkspaceForms(workspaceId);
-    }
-    setExpandedWorkspaces(newExpanded);
-  };
 
   const handleWorkspaceClick = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);
@@ -177,17 +125,10 @@ export function SideNav() {
     if (!editingWorkspaceId || !user) return;
 
     try {
-      await apiClient.put(`/workspaces/${editingWorkspaceId}`, {
-        name: newWorkspaceName,
-        userId: user.id,
-      });
-      setWorkspaces(
-        workspaces.map((w) =>
-          w._id === editingWorkspaceId ? { ...w, name: newWorkspaceName } : w
-        )
-      );
+      await updateWorkspace({ id: editingWorkspaceId, data: { name: newWorkspaceName } });
+
       if (selectedWorkspace?._id === editingWorkspaceId) {
-        setSelectedWorkspace({ ...selectedWorkspace, name: newWorkspaceName });
+        // Optimistic update handled by React Query
       }
       toast.success(`Workspace renamed to "${newWorkspaceName}"`);
     } catch (error) {
@@ -208,14 +149,10 @@ export function SideNav() {
     if (!workspaceToDelete) return;
 
     try {
-      await apiClient.delete(`/workspaces/${workspaceToDelete._id}`);
-      const newWorkspaces = workspaces.filter(
-        (w) => w._id !== workspaceToDelete._id
-      );
-      setWorkspaces(newWorkspaces);
+      await deleteWorkspace(workspaceToDelete._id);
 
       if (selectedWorkspace?._id === workspaceToDelete._id) {
-        setSelectedWorkspace(newWorkspaces[0] || null);
+        // Selection logic handled by context
       }
 
       toast.success(
@@ -248,36 +185,16 @@ export function SideNav() {
     }, 100);
   };
 
-  // Helper function to get user's role in a workspace
-  const getUserRole = (workspace: Workspace): Role | null => {
-    if (!user?.id || !workspace.members) return null;
-
-    // Check if user is the owner (userId field)
-    if (workspace.userId === user.id) return 'owner';
-
-    const member = workspace.members.find((m) => {
-      const memberId = typeof m.user === 'string' ? m.user : m.user._id;
-      return memberId === user.id;
-    });
-    return member?.role || null;
-  };
-
-  // Helper function to check if user can perform an action
-  const canPerformAction = (workspace: Workspace, requiredRoles: string[]): boolean => {
-    const role = getUserRole(workspace);
-    return role ? requiredRoles.includes(role) : false;
-  };
-
   return (
     <>
       <Toaster richColors />
-      <nav className="text-xs">
+      <nav className="text-xs p-2 space-y-4">
         {initialSections.map((section) => (
-          <div key={section.title} className="mb-2">
-            <div className="px-1.5 pb-0.5 text-[0.65rem] font-medium text-muted-foreground">
+          <div key={section.title}>
+            <div className="px-2 pb-2 text-[0.7rem] font-semibold text-slate-400 uppercase tracking-wider">
               {section.title}
             </div>
-            <ul className="space-y-0">
+            <ul className="space-y-0.5">
               {section.items.map((item: any) => (
                 <li key={item.label}>
                   {item.action === "create-workspace" ? (
@@ -292,35 +209,52 @@ export function SideNav() {
                           : "Create new workspace"
                       }
                       className={cn(
-                        "w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors",
+                        "w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-all duration-200",
                         canCreateWorkspace
-                          ? "hover:bg-blue-50 hover:text-blue-700 font-medium cursor-pointer"
+                          ? "hover:bg-blue-50 text-slate-600 hover:text-blue-700 font-medium cursor-pointer group"
                           : "opacity-50 cursor-not-allowed"
                       )}
                     >
-                      <Plus className="h-3 w-3" />
+                      <div className={cn(
+                        "w-5 h-5 rounded-md flex items-center justify-center transition-colors",
+                        canCreateWorkspace ? "bg-slate-100 group-hover:bg-blue-100 text-slate-500 group-hover:text-blue-600" : "bg-slate-100"
+                      )}>
+                        <Plus className="h-3.5 w-3.5" />
+                      </div>
                       {item.label}
                     </button>
                   ) : item.label === "Reports" ? (
                     <Link
                       href="/reports"
                       className={cn(
-                        "block rounded-md px-1.5 py-1 hover:bg-muted",
-                        item.active ? "bg-muted font-medium" : ""
+                        "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all duration-200",
+                        item.active
+                          ? "bg-blue-50 text-blue-700 font-semibold"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                       aria-current={item.active ? "page" : undefined}
                     >
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-colors",
+                        item.active ? "bg-blue-500" : "bg-slate-300"
+                      )} />
                       {item.label}
                     </Link>
                   ) : (
                     <a
                       href="#"
                       className={cn(
-                        "block rounded-md px-1.5 py-1 hover:bg-muted",
-                        item.active ? "bg-muted font-medium" : ""
+                        "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all duration-200",
+                        item.active
+                          ? "bg-blue-50 text-blue-700 font-semibold"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                       aria-current={item.active ? "page" : undefined}
                     >
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-colors",
+                        item.active ? "bg-blue-500" : "bg-slate-300"
+                      )} />
                       {item.label}
                     </a>
                   )}
@@ -330,23 +264,23 @@ export function SideNav() {
             {section.title === "Views" && (
               <>
                 {/* Own Workspaces Section */}
-                <div className="mt-1">
+                <div className="mt-4">
                   <button
                     onClick={toggleOwnWorkspaces}
-                    className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-muted"
+                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 transition-colors group"
                   >
-                    <span>Own Workspaces</span>
+                    <span className="font-semibold text-slate-700 group-hover:text-slate-900">Own Workspaces</span>
                     <ChevronDown
                       className={cn(
-                        "h-4 w-4 transform transition-transform",
+                        "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transform transition-transform duration-200",
                         isOwnWorkspacesOpen ? "rotate-180" : ""
                       )}
                     />
                   </button>
                   {isOwnWorkspacesOpen && (
-                    <div className="pl-4 pt-1">
+                    <div className="pl-2 pt-1">
                       {isLoading ? (
-                        <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
                           Loading...
                         </p>
                       ) : ownedWorkspaces.length > 0 ? (
@@ -362,157 +296,22 @@ export function SideNav() {
                                   }
                                   onKeyDown={handleInputKeyDown}
                                   onBlur={handleInputBlur}
-                                  className="h-8"
+                                  className="h-7 text-xs"
                                 />
                               ) : (
-                                <div>
-                                  <ContextMenu>
-                                    <ContextMenuTrigger>
-                                      <div className="flex items-center group">
-                                        <button
-                                          onClick={(e) =>
-                                            toggleWorkspaceExpansion(
-                                              workspace._id,
-                                              e
-                                            )
-                                          }
-                                          className="p-1 hover:bg-muted rounded flex-shrink-0"
-                                        >
-                                          <ChevronDown
-                                            className={cn(
-                                              "h-3 w-3 transform transition-transform",
-                                              expandedWorkspaces.has(
-                                                workspace._id
-                                              )
-                                                ? "rotate-180"
-                                                : ""
-                                            )}
-                                          />
-                                        </button>
-                                        <Link
-                                          href={`/workspace/${workspace._id}`}
-                                          onClick={() =>
-                                            handleWorkspaceClick(workspace)
-                                          }
-                                          className={cn(
-                                            "flex-1 rounded-md px-2 py-1.5 hover:bg-muted block",
-                                            selectedWorkspace?._id ===
-                                              workspace._id
-                                              ? "bg-muted font-medium"
-                                              : ""
-                                          )}
-                                        >
-                                          {workspace.name}
-                                        </Link>
-                                      </div>
-                                    </ContextMenuTrigger>
-                                    <ContextMenuContent>
-                                      {/* Settings - owner, admin, editor */}
-                                      {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
-                                        <ContextMenuItem onClick={() => router.push(`/workspace/${workspace._id}/settings`)}>
-                                          <Settings className="mr-2 h-4 w-4" />
-                                          Settings
-                                        </ContextMenuItem>
-                                      )}
-
-                                      {/* Share - owner, admin */}
-                                      {canPerformAction(workspace, ["owner", "admin"]) && (
-                                        <ShareWorkspaceDialog workspace={workspace} canManageMembers={true}>
-                                          <ContextMenuItem onSelect={(e) => e.preventDefault()}>
-                                            <Share2 className="mr-2 h-4 w-4" />
-                                            Share
-                                          </ContextMenuItem>
-                                        </ShareWorkspaceDialog>
-                                      )}
-
-                                      {/* Add Form - owner, admin, editor */}
-                                      {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
-                                        <ContextMenuItem
-                                          onClick={() => {
-                                            window.location.href = `/workspace/${workspace._id}/forms`;
-                                          }}
-                                          className="text-blue-600"
-                                        >
-                                          <Plus className="mr-2 h-4 w-4" />
-                                          Add Form
-                                        </ContextMenuItem>
-                                      )}
-                                      {/* Documents - all roles */}
-                                      <ContextMenuItem
-                                        onClick={() => {
-                                          window.location.href = `/workspace/${workspace._id}/documents`;
-                                        }}
-                                      >
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        Documents
-                                      </ContextMenuItem>
-                                      {/* Rename - owner, admin */}
-                                      {canPerformAction(workspace, ["owner", "admin"]) && (
-                                        <ContextMenuItem
-                                          onClick={() =>
-                                            handleRenameClick(workspace)
-                                          }
-                                        >
-                                          <Pencil className="mr-2 h-4 w-4" />
-                                          Rename
-                                        </ContextMenuItem>
-                                      )}
-                                      {/* Delete - owner only */}
-                                      {canPerformAction(workspace, ["owner"]) && (
-                                        <ContextMenuItem
-                                          className="text-red-600"
-                                          onClick={() =>
-                                            handleDeleteClick(workspace)
-                                          }
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete Workspace
-                                        </ContextMenuItem>
-                                      )}
-
-                                    </ContextMenuContent>
-                                  </ContextMenu>
-
-                                  {/* Nested Forms List */}
-                                  {expandedWorkspaces.has(workspace._id) && (
-                                    <div className="pl-6 pt-1 space-y-0.5">
-                                      {workspaceForms[workspace._id] ===
-                                        undefined ? (
-                                        <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
-                                          Loading forms...
-                                        </p>
-                                      ) : workspaceForms[workspace._id].length >
-                                        0 ? (
-                                        workspaceForms[workspace._id].map(
-                                          (form) => (
-                                            <Link
-                                              key={form._id}
-                                              href={`/workspace/${workspace._id}/forms`}
-                                              className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted text-[0.65rem]"
-                                            >
-                                              <FileText className="h-3 w-3 text-muted-foreground" />
-                                              {form.title}
-                                            </Link>
-                                          )
-                                        )
-                                      ) : (
-                                        <Link
-                                          href={`/workspace/${workspace._id}/forms`}
-                                          className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-blue-50 hover:text-blue-700 text-[0.65rem] font-medium transition-colors group"
-                                        >
-                                          <Plus className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                          <span>Create Form</span>
-                                        </Link>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
+                                <WorkspaceItem
+                                  workspace={workspace}
+                                  isSelected={selectedWorkspace?._id === workspace._id}
+                                  onRename={handleRenameClick}
+                                  onDelete={handleDeleteClick}
+                                  onSelect={handleWorkspaceClick}
+                                />
                               )}
                             </li>
                           ))}
                         </ul>
                       ) : (
-                        <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
                           No own workspaces.
                         </p>
                       )}
@@ -521,160 +320,41 @@ export function SideNav() {
                 </div>
 
                 {/* Shared Workspaces Section */}
-                <div className="mt-1">
+                <div className="mt-2">
                   <button
                     onClick={toggleSharedWorkspaces}
-                    className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-muted"
+                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 transition-colors group"
                   >
-                    <span>Shared Workspaces</span>
+                    <span className="font-semibold text-slate-700 group-hover:text-slate-900">Shared Workspaces</span>
                     <ChevronDown
                       className={cn(
-                        "h-4 w-4 transform transition-transform",
+                        "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transform transition-transform duration-200",
                         isSharedWorkspacesOpen ? "rotate-180" : ""
                       )}
                     />
                   </button>
                   {isSharedWorkspacesOpen && (
-                    <div className="pl-4 pt-1">
+                    <div className="pl-2 pt-1">
                       {isLoading ? (
-                        <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
                           Loading...
                         </p>
                       ) : sharedWorkspaces.length > 0 ? (
                         <ul className="space-y-0.5">
                           {sharedWorkspaces.map((workspace) => (
                             <li key={workspace._id}>
-                              <div>
-                                <ContextMenu>
-                                  <ContextMenuTrigger>
-                                    <div className="flex items-center group">
-                                      <button
-                                        onClick={(e) =>
-                                          toggleWorkspaceExpansion(
-                                            workspace._id,
-                                            e
-                                          )
-                                        }
-                                        className="p-1 hover:bg-muted rounded flex-shrink-0"
-                                      >
-                                        <ChevronDown
-                                          className={cn(
-                                            "h-3 w-3 transform transition-transform",
-                                            expandedWorkspaces.has(
-                                              workspace._id
-                                            )
-                                              ? "rotate-180"
-                                              : ""
-                                          )}
-                                        />
-                                      </button>
-                                      <Link
-                                        href={`/workspace/${workspace._id}`}
-                                        onClick={() =>
-                                          handleWorkspaceClick(workspace)
-                                        }
-                                        className={cn(
-                                          "flex-1 rounded-md px-2 py-1.5 hover:bg-muted block",
-                                          selectedWorkspace?._id ===
-                                            workspace._id
-                                            ? "bg-muted font-medium"
-                                            : ""
-                                        )}
-                                      >
-                                        {workspace.name}
-                                      </Link>
-                                    </div>
-                                  </ContextMenuTrigger>
-                                  <ContextMenuContent>
-                                    {/* Settings - owner, admin, editor */}
-                                    {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
-                                      <ContextMenuItem onClick={() => router.push(`/workspace/${workspace._id}/settings`)}>
-                                        <Settings className="mr-2 h-4 w-4" />
-                                        Settings
-                                      </ContextMenuItem>
-                                    )}
-
-                                    {/* Share - owner, admin */}
-                                    {canPerformAction(workspace, ["owner", "admin"]) && (
-                                      <ShareWorkspaceDialog workspace={workspace} canManageMembers={true}>
-                                        <ContextMenuItem onSelect={(e) => e.preventDefault()}>
-                                          <Share2 className="mr-2 h-4 w-4" />
-                                          Share
-                                        </ContextMenuItem>
-                                      </ShareWorkspaceDialog>
-                                    )}
-
-                                    {/* Add Form - owner, admin, editor */}
-                                    {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
-                                      <ContextMenuItem
-                                        onClick={() => {
-                                          window.location.href = `/workspace/${workspace._id}/forms`;
-                                        }}
-                                        className="text-blue-600"
-                                      >
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Add Form
-                                      </ContextMenuItem>
-                                    )}
-                                    {/* Documents - all roles */}
-                                    <ContextMenuItem
-                                      onClick={() => {
-                                        window.location.href = `/workspace/${workspace._id}/documents`;
-                                      }}
-                                    >
-                                      <FileText className="mr-2 h-4 w-4" />
-                                      Documents
-                                    </ContextMenuItem>
-                                    {/* Rename - owner, admin */}
-                                    {canPerformAction(workspace, ["owner", "admin"]) && (
-                                      <ContextMenuItem
-                                        onClick={() =>
-                                          handleRenameClick(workspace)
-                                        }
-                                      >
-                                        <Pencil className="mr-2 h-4 w-4" />
-                                        Rename
-                                      </ContextMenuItem>
-                                    )}
-
-                                  </ContextMenuContent>
-                                </ContextMenu>
-
-                                {/* Nested Forms List */}
-                                {expandedWorkspaces.has(workspace._id) && (
-                                  <div className="pl-6 pt-1 space-y-0.5">
-                                    {workspaceForms[workspace._id] ===
-                                      undefined ? (
-                                      <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
-                                        Loading forms...
-                                      </p>
-                                    ) : workspaceForms[workspace._id].length >
-                                      0 ? (
-                                      workspaceForms[workspace._id].map(
-                                        (form) => (
-                                          <Link
-                                            key={form._id}
-                                            href={`/workspace/${workspace._id}/forms`}
-                                            className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted text-[0.65rem]"
-                                          >
-                                            <FileText className="h-3 w-3 text-muted-foreground" />
-                                            {form.title}
-                                          </Link>
-                                        )
-                                      )
-                                    ) : (
-                                      <p className="px-2 py-1 text-[0.65rem] text-muted-foreground">
-                                        No forms available
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                              <WorkspaceItem
+                                workspace={workspace}
+                                isSelected={selectedWorkspace?._id === workspace._id}
+                                onRename={handleRenameClick}
+                                onDelete={handleDeleteClick}
+                                onSelect={handleWorkspaceClick}
+                              />
                             </li>
                           ))}
                         </ul>
                       ) : (
-                        <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
                           No shared workspaces.
                         </p>
                       )}

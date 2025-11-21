@@ -17,22 +17,13 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useWorkspace } from "@/lib/workspace-context";
-import apiClient from "@/utils/api.client";
+import { useWorkspaceMembers, useInviteMember, useRemoveMember, useUpdateMemberRole } from "@/features/workspace/hooks/use-workspaces";
 import { toast } from "sonner";
-import { Loader2, Trash2, UserPlus, Copy, Check } from "lucide-react";
+import { Loader2, UserPlus, Copy, Check } from "lucide-react";
 import { Role } from "@/utils/permissions";
-
-interface Member {
-  user: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  role: Role;
-}
+import { UserList } from "@/components/workspace/settings/user-list";
 
 interface ShareWorkspaceDialogProps {
   children: React.ReactNode;
@@ -45,63 +36,42 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
   const workspace = propWorkspace || selectedWorkspace;
   const canManageMembers = propCanManageMembers !== undefined ? propCanManageMembers : permissions.canManageMembers;
 
-  const [members, setMembers] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: members = [], isLoading: isMembersLoading } = useWorkspaceMembers(workspace?._id);
+  const { mutateAsync: inviteMember, isPending: isInviting } = useInviteMember();
+  const { mutateAsync: removeMember } = useRemoveMember();
+  const { mutateAsync: updateMemberRole } = useUpdateMemberRole();
+
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>('editor');
-  const [isInviting, setIsInviting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [lastInvitedLink, setLastInvitedLink] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
-  const fetchMembers = async () => {
-    if (!workspace) return;
-    setIsLoading(true);
-    try {
-      const response = await apiClient.get(`/workspaces/${workspace._id}/members`);
-      setMembers(response.data);
-    } catch (error) {
-      console.error("Failed to fetch members:", error);
-      toast.error("Failed to load workspace members");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchMembers();
-    }
-  }, [isOpen, workspace]);
-
   const handleInvite = async () => {
     if (!workspace || !inviteEmail) return;
 
-    setIsInviting(true);
     setLastInvitedLink(null);
     try {
-      const response = await apiClient.post(`/workspaces/${workspace._id}/invite`, {
+      const response = await inviteMember({
+        id: workspace._id,
         email: inviteEmail,
         role: inviteRole,
-        origin: window.location.origin // Send origin so backend can construct the full link
+        origin: window.location.origin
       });
       toast.success("Invitation sent successfully");
 
       // If backend returns invitationId, construct the link
-      if (response.data.invitationId) {
-        const link = `${window.location.origin}/accept-invitation/${response.data.invitationId}`;
+      if (response.invitationId) {
+        const link = `${window.location.origin}/accept-invitation/${response.invitationId}`;
         setLastInvitedLink(link);
       }
 
       setInviteEmail("");
       setInviteRole('editor');
-      fetchMembers(); // Refresh list
     } catch (error: any) {
       console.error("Invite failed:", error);
       const message = error.response?.data?.error || "Failed to send invitation";
       toast.error(message);
-    } finally {
-      setIsInviting(false);
     }
   };
 
@@ -118,9 +88,8 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
     if (!workspace) return;
 
     try {
-      await apiClient.delete(`/workspaces/${workspace._id}/members/${userId}`);
+      await removeMember({ workspaceId: workspace._id, userId });
       toast.success("Member removed successfully");
-      setMembers(members.filter(m => m.user._id !== userId));
     } catch (error: any) {
       console.error("Remove member failed:", error);
       const message = error.response?.data?.error || "Failed to remove member";
@@ -132,9 +101,8 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
     if (!workspace) return;
 
     try {
-      await apiClient.put(`/workspaces/${workspace._id}/members/${userId}`, { role: newRole });
+      await updateMemberRole({ workspaceId: workspace._id, userId, role: newRole });
       toast.success("Role updated successfully");
-      setMembers(members.map(m => m.user._id === userId ? { ...m, role: newRole } : m));
     } catch (error: any) {
       console.error("Update role failed:", error);
       const message = error.response?.data?.error || "Failed to update role";
@@ -144,7 +112,7 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
 
   const totalMembers = members.length;
   const maxMembers = 6; // 1 Owner + 5 Shared
-  const sharedCount = members.filter(m => m.role !== 'owner').length;
+  const sharedCount = members.filter((m: any) => m.role !== 'owner').length;
   const maxShared = 5;
 
   return (
@@ -224,81 +192,18 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
 
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-muted-foreground">Workspace Members</h4>
-            {isLoading ? (
+            {isMembersLoading ? (
               <div className="flex justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="space-y-3">
-                {members.map((member) => {
-                  const isOwner = currentRole === 'owner';
-                  const isAdmin = currentRole === 'admin';
-                  const isSelf = false; // We don't have current user ID easily available here without parsing token again or passing it. 
-                  // Actually we can check if member.role is owner.
-                  const isMemberOwner = member.role === 'owner';
-
-                  // Determine if current user can edit this member's role
-                  // Owner can edit everyone (except themselves usually, but let's assume they can't change their own role here to avoid locking themselves out easily or it's handled by backend)
-                  // Admin can edit non-owners and non-admins (wait, prompt says "except his", implying they can't edit themselves. Can they edit other admins? Prompt says "Admin can make it Editor or Viewer for other user roles". It doesn't explicitly forbid editing other admins, but usually admins can't demote other admins unless they are owner. I'll assume Admin can edit anyone who is NOT an owner and NOT themselves).
-                  // Actually, let's look at the prompt again: "Admin can make it Editor or Viewer for other user roles except his".
-
-                  // We need the current user's ID to know if it's "his".
-                  // We can get it from localStorage as done in workspace-context, or just rely on the fact that the UI shouldn't show edit for self.
-                  // Let's try to get current user ID from localStorage for the check.
-                  const storedUserStr = typeof window !== 'undefined' ? localStorage.getItem("user") : null;
-                  const currentUserId = storedUserStr ? JSON.parse(storedUserStr).id : null;
-                  const isMe = member.user._id === currentUserId;
-
-                  const canEditRole = (isOwner && !isMe) || (isAdmin && !isMemberOwner && !isMe);
-
-                  return (
-                    <div key={member.user._id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member.user.email}`} />
-                          <AvatarFallback>{member.user.name?.charAt(0) || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium leading-none">
-                            {member.user.name}
-                            {!canEditRole && <span className="ml-2 text-xs text-muted-foreground capitalize">({member.role})</span>}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{member.user.email}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {canEditRole ? (
-                          <Select
-                            value={member.role}
-                            onValueChange={(value: Role) => handleUpdateRole(member.user._id, value)}
-                          >
-                            <SelectTrigger className="w-[100px] h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {isOwner && <SelectItem value="admin">Admin</SelectItem>}
-                              <SelectItem value="editor">Editor</SelectItem>
-                              <SelectItem value="viewer">Viewer</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : null}
-
-                        {canManageMembers && member.role !== 'owner' && !isMe && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive/90 hover:bg-destructive/10 h-8 w-8"
-                            onClick={() => handleRemoveMember(member.user._id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              <UserList
+                members={members}
+                currentRole={currentRole}
+                canManageMembers={canManageMembers}
+                onUpdateRole={handleUpdateRole}
+                onRemoveMember={handleRemoveMember}
+              />
             )}
           </div>
         </div>

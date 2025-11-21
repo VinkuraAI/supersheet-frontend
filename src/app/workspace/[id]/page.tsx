@@ -4,7 +4,7 @@ import { useParams } from "next/navigation"
 import { TopBar } from "@/components/service-desk/topbar"
 import { SideNav } from "@/components/service-desk/sidenav"
 import { FiltersBar } from "@/components/service-desk/filters-bar"
-import { TicketsTable } from "@/components/service-desk/tickets-table"
+import { WorkspaceTable } from "@/components/workspace/table/workspace-table"
 import { RightPanel } from "@/components/service-desk/right-panel"
 import { AiChatWidget } from "@/components/service-desk/ai-chat-widget"
 import { Sheet, SheetContent, SheetTrigger, SheetOverlay } from "@/components/ui/sheet"
@@ -16,8 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FileText, FolderOpen, Share2 } from "lucide-react";
 import Link from "next/link";
-import apiClient from "@/utils/api.client";
-import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog";
+import { useWorkspaceDetails } from "@/features/workspace/hooks/use-workspaces";
+// import { JobDescriptionDialog } from "@/components/dialogs/job-description-dialog"; // Moved to WorkspaceToolbar
 import { ShareWorkspaceDialog } from "@/components/dialogs/share-workspace-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -75,9 +75,15 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
   const params = useParams();
   const workspaceId = params.id as string;
   const [rows, setRows] = useState<any[]>([]);
-  const [initialRows, setInitialRows] = useState<any[]>([]);
   const [schema, setSchema] = useState<any[]>([]);
   const [workspaceData, setWorkspaceData] = useState<any>(null);
+
+  const {
+    data: workspaceDetails,
+    isLoading: isDetailsLoading,
+    error: detailsError,
+    refetch: refetchWorkspaceDetails
+  } = useWorkspaceDetails(selectedWorkspace?._id);
 
   // Sync selectedWorkspace with URL params
   useEffect(() => {
@@ -89,21 +95,13 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
     }
   }, [workspaceId, workspaces, selectedWorkspace, setSelectedWorkspace]);
 
+  // Process workspace details when data is available
   useEffect(() => {
-    if (selectedWorkspace) {
-      fetchWorkspaceData();
-    }
-  }, [selectedWorkspace]);
-
-  const fetchWorkspaceData = async () => {
-    if (!selectedWorkspace?._id) return;
-
-    try {
-      const response = await apiClient.get(`/workspaces/${selectedWorkspace._id}`);
-      setRows(response.data.table.rows || []);
+    if (workspaceDetails) {
+      setRows(workspaceDetails.table.rows || []);
 
       // Deduplicate schema by column name, keeping the first occurrence
-      const rawSchema = response.data.table.schema || [];
+      const rawSchema = workspaceDetails.table.schema || [];
       const uniqueSchema = rawSchema.filter((col: any, index: number, self: any[]) =>
         index === self.findIndex((c: any) => c.name === col.name)
       );
@@ -138,12 +136,16 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
       }
 
       setSchema(uniqueSchema);
+      setWorkspaceData(workspaceDetails);
+    }
+  }, [workspaceDetails]);
 
-      setWorkspaceData(response.data);
-    } catch (error: any) {
-      console.error("Failed to fetch workspace data:", error);
-      if (error.response?.status === 403) {
-        // Handle forbidden access
+  // Handle errors
+  useEffect(() => {
+    if (detailsError) {
+      console.error("Failed to fetch workspace data:", detailsError);
+      // @ts-ignore
+      if (detailsError.response?.status === 403) {
         toast({
           variant: "destructive",
           title: "Access Denied",
@@ -151,7 +153,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
         });
       }
     }
-  };
+  }, [detailsError, toast]);
 
   return (
     <main className="min-h-dvh flex flex-col text-[0.75rem]">
@@ -195,48 +197,18 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
               </div>
             ) : selectedWorkspace ? (
               <>
-                <div className="bg-card border rounded-md flex-shrink-0">
-                  <div className="flex items-center justify-between border-b px-3 py-2">
-                    <h1 className="text-sm font-semibold text-pretty">
-                      {selectedWorkspace.name}
-                    </h1>
-                    <div className="flex items-center gap-1.5">
-                      <JobDescriptionDialog
-                        workspaceId={selectedWorkspace._id}
-                        workspaceName={selectedWorkspace.name}
-                        initialJd={workspaceData?.jd || ""}
-                        onJdUpdate={(newJd) => {
-                          setWorkspaceData((prev: any) => ({ ...prev, jd: newJd }));
-                        }}
-                      />
-                      <Link href={`/workspace/${selectedWorkspace._id}/documents`}>
-                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                          <FolderOpen className="mr-1.5 h-3 w-3" />
-                          Documents
-                        </Button>
-                      </Link>
-
-                      <Link href={`/workspace/${selectedWorkspace._id}/forms`}>
-                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-                          <FileText className="mr-1.5 h-3 w-3" />
-                          Workspace Form
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="p-2">
-                    <Suspense>
-                      <FiltersBar />
-                    </Suspense>
-                  </div>
-                </div>
-
                 <div className="bg-card border rounded-md flex-1 min-h-0 flex flex-col h-full">
-                  <TicketsTable
+                  <WorkspaceTable
                     tickets={rows}
                     schema={schema}
                     setData={setRows}
-                    onRefreshData={fetchWorkspaceData}
+                    onRefreshData={refetchWorkspaceDetails}
+                    workspaceName={selectedWorkspace.name}
+                    workspaceId={selectedWorkspace._id}
+                    jd={workspaceData?.jd || ""}
+                    onJdUpdate={(newJd) => {
+                      setWorkspaceData((prev: any) => ({ ...prev, jd: newJd }));
+                    }}
                   />
                 </div>
               </>

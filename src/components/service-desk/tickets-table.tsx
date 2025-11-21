@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, RefreshCw, AlertTriangle, X } from "lucide-react";
-import apiClient from "@/utils/api.client";
+// import apiClient from "@/utils/api.client"; // Removed
 import { AddCandidateDialog } from "@/components/dialogs/add-candidate-dialog";
 import { EmailComposerDialog } from "@/components/dialogs/email-composer-dialog";
 import {
@@ -64,56 +64,56 @@ const STATUS_OPTIONS = [
 // Get feedback based on AI score
 function getFeedbackFromScore(score: number): { text: string; color: string } {
   if (score >= 90) {
-    return { 
-      text: "Excellent match, highly recommended", 
-      color: "bg-green-100 text-green-800 border-green-300" 
+    return {
+      text: "Excellent match, highly recommended",
+      color: "bg-green-100 text-green-800 border-green-300"
     };
   } else if (score >= 75) {
-    return { 
-      text: "Good match, recommended", 
-      color: "bg-blue-100 text-blue-800 border-blue-300" 
+    return {
+      text: "Good match, recommended",
+      color: "bg-blue-100 text-blue-800 border-blue-300"
     };
   } else if (score >= 60) {
-    return { 
-      text: "Moderate match, consider", 
-      color: "bg-yellow-100 text-yellow-800 border-yellow-300" 
+    return {
+      text: "Moderate match, consider",
+      color: "bg-yellow-100 text-yellow-800 border-yellow-300"
     };
   } else if (score >= 40) {
-    return { 
-      text: "Weak match, gaps in requirements", 
-      color: "bg-orange-100 text-orange-800 border-orange-300" 
+    return {
+      text: "Weak match, gaps in requirements",
+      color: "bg-orange-100 text-orange-800 border-orange-300"
     };
   } else {
-    return { 
-      text: "Poor match, not recommended", 
-      color: "bg-red-100 text-red-800 border-red-300" 
+    return {
+      text: "Poor match, not recommended",
+      color: "bg-red-100 text-red-800 border-red-300"
     };
   }
 }
 
 function MailConsent({ open, onOpenChange, onSend, onDontSend }: { open: boolean, onOpenChange: (open: boolean) => void, onSend: () => void, onDontSend: () => void }) {
-    return (
-        <AlertDialog open={open} onOpenChange={onOpenChange}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Send Mail?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Do you want to send an email to the candidate?
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={onDontSend}>Don&apos;t Send</AlertDialogCancel>
-                    <AlertDialogAction onClick={onSend}>Send Mail</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Send Mail?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Do you want to send an email to the candidate?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onDontSend}>Don&apos;t Send</AlertDialogCancel>
+          <AlertDialogAction onClick={onSend}>Send Mail</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
 
 // Feedback Cell Component
 function FeedbackCell({ aiScore }: { aiScore: number }) {
   const feedback = getFeedbackFromScore(aiScore || 0);
-  
+
   return (
     <div className={`px-2 py-1 rounded border text-xs font-medium whitespace-normal break-words ${feedback.color}`}>
       {feedback.text}
@@ -138,8 +138,8 @@ function InformedCell({
 
   const handleInform = () => {
     if (!rowData.Name || !rowData.Email) {
-        alert("Please fill in the candidate's Name and Email before sending a mail.");
-        return;
+      alert("Please fill in the candidate's Name and Email before sending a mail.");
+      return;
     }
     setIsDialogOpen(true);
   };
@@ -182,18 +182,18 @@ function StatusCell({
   disabled?: boolean;
 }) {
   const currentStatus = STATUS_OPTIONS.find(opt => opt.value === value) || STATUS_OPTIONS[0];
-  
+
   return (
     <Select value={value || "New"} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger 
+      <SelectTrigger
         className={`h-7 text-xs border ${currentStatus.color} font-medium`}
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {STATUS_OPTIONS.map((option) => (
-          <SelectItem 
-            key={option.value} 
+          <SelectItem
+            key={option.value}
             value={option.value}
             className="text-xs"
           >
@@ -211,15 +211,15 @@ function StatusCell({
 function formatCellContent(content: any): string {
   // Handle null, undefined, or empty values
   if (content === null || content === undefined || content === "") return "";
-  
+
   // Convert to string if it's not already
   const contentStr = String(content);
-  
+
   // Handle arrays stored as strings (e.g., "skill1,skill2,skill3")
   if (contentStr.includes(",")) {
     return contentStr.split(",").map(item => item.trim()).join(", ");
   }
-  
+
   // Handle JSON arrays
   try {
     const parsed = JSON.parse(contentStr);
@@ -229,7 +229,7 @@ function formatCellContent(content: any): string {
   } catch (e) {
     // Not JSON, continue with string
   }
-  
+
   return contentStr;
 }
 
@@ -242,7 +242,7 @@ function TruncatedCell({
   onDoubleClick?: () => void;
 }) {
   const formattedContent = formatCellContent(content);
-  
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -262,6 +262,7 @@ function TruncatedCell({
 }
 
 import { useWorkspace } from "@/lib/workspace-context";
+import { useSendRowMail, useSyncWorkspace } from "@/features/workspace/hooks/use-workspaces";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function TicketsTable({
@@ -276,6 +277,8 @@ export function TicketsTable({
   onRefreshData?: () => void;
 }) {
   const { selectedWorkspace } = useWorkspace();
+  const { mutateAsync: sendRowMail } = useSendRowMail();
+  const { mutateAsync: syncWorkspace } = useSyncWorkspace();
   const disabled = !selectedWorkspace;
   const isMobile = useIsMobile();
 
@@ -336,7 +339,7 @@ export function TicketsTable({
     const deleted = initialData.current.some(
       (initialRow) => !currentData.some((row) => row._id === initialRow._id)
     );
-    
+
     hasUncommittedChangesRef.current = added || updated || deleted;
   }, [currentData, initialData]);
 
@@ -347,8 +350,8 @@ export function TicketsTable({
     if (!hasUncommittedChangesRef.current) {
       setCurrentData(tickets);
       // After successful sync, update initialData to match the fresh data from parent
-      if (initialData.current.length !== tickets.length || 
-          JSON.stringify(initialData.current) !== JSON.stringify(tickets)) {
+      if (initialData.current.length !== tickets.length ||
+        JSON.stringify(initialData.current) !== JSON.stringify(tickets)) {
         initialData.current = [...tickets];
       }
     }
@@ -362,7 +365,7 @@ export function TicketsTable({
         setShowSyncWarning(false);
         return;
       }
-      
+
       const added = currentData.some((row) => row.isNew);
       const updated = currentData.some((row) => {
         const initialRow = initialData.current.find((r) => r._id === row._id);
@@ -460,9 +463,9 @@ export function TicketsTable({
     const newData = currentData.map((item, i) =>
       i === row
         ? {
-            ...item,
-            data: { ...item.data, [col]: editValue },
-          }
+          ...item,
+          data: { ...item.data, [col]: editValue },
+        }
         : item
     );
     setCurrentData(newData);
@@ -480,30 +483,30 @@ export function TicketsTable({
   // Helper function to update status and send email
   const sendMailAndUpdate = async (rowIndex: number, newStatus: string) => {
     if (disabled) return;
-    
+
     const row = currentData[rowIndex];
     const rowId = row._id;
     const workspaceId = selectedWorkspace._id;
 
     try {
       // Send email first
-      await apiClient.post(`/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {});
-      
+      await sendRowMail({ workspaceId, rowId });
+
       // Then update status
       const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Yes' };
       const newData = currentData.map((item, i) =>
         i === rowIndex
           ? {
-              ...item,
-              data: updatedRowData,
-            }
+            ...item,
+            data: updatedRowData,
+          }
           : item
       );
-      
+
       setCurrentData(newData);
       setData(newData);
       initialData.current = newData;
-      
+
       if (selectedWorkspace) {
         localStorage.setItem(
           `workspace-${selectedWorkspace._id}-data`,
@@ -518,23 +521,23 @@ export function TicketsTable({
   // Helper function to update status only without sending email
   const updateStatusOnly = (rowIndex: number, newStatus: string) => {
     if (disabled) return;
-    
+
     const row = currentData[rowIndex];
     const updatedRowData = { ...row.data, Status: newStatus };
-    
+
     const newData = currentData.map((item, i) =>
       i === rowIndex
         ? {
-            ...item,
-            data: updatedRowData,
-          }
+          ...item,
+          data: updatedRowData,
+        }
         : item
     );
-    
+
     setCurrentData(newData);
     setData(newData);
     initialData.current = newData;
-    
+
     if (selectedWorkspace) {
       localStorage.setItem(
         `workspace-${selectedWorkspace._id}-data`,
@@ -558,29 +561,29 @@ export function TicketsTable({
 
     // If status is changing to any status except 'New', ask about sending email
     if (newStatus !== 'New' && oldStatus !== newStatus) {
-        if (!row.data.Name || !row.data.Email) {
-            alert("Please fill in the candidate's Name and Email before changing status.");
-            return;
+      if (!row.data.Name || !row.data.Email) {
+        alert("Please fill in the candidate's Name and Email before changing status.");
+        return;
+      }
+      setSelectedCandidateForEmail({
+        name: row.data.Name,
+        email: row.data.Email,
+        rowIndex,
+        newStatus
+      });
+      setMailConsentInfo({
+        open: true,
+        onSend: () => {
+          setMailConsentInfo({ open: false });
+          setEmailComposerOpen(true);
+        },
+        onDontSend: () => {
+          updateStatusOnly(rowIndex, newStatus);
+          setMailConsentInfo({ open: false });
         }
-        setSelectedCandidateForEmail({
-            name: row.data.Name,
-            email: row.data.Email,
-            rowIndex,
-            newStatus
-        });
-        setMailConsentInfo({
-            open: true,
-            onSend: () => {
-                setMailConsentInfo({ open: false });
-                setEmailComposerOpen(true);
-            },
-            onDontSend: () => {
-                updateStatusOnly(rowIndex, newStatus);
-                setMailConsentInfo({ open: false });
-            }
-        });
+      });
     } else {
-        updateStatusOnly(rowIndex, newStatus);
+      updateStatusOnly(rowIndex, newStatus);
     }
   };
 
@@ -593,16 +596,16 @@ export function TicketsTable({
     const newData = currentData.map((item, i) =>
       i === rowIndex
         ? {
-            ...item,
-            data: { ...item.data, Informed: newValue },
-          }
+          ...item,
+          data: { ...item.data, Informed: newValue },
+        }
         : item
     );
-    
+
     setCurrentData(newData);
     setData(newData);
     initialData.current = newData;
-    
+
     // Save to localStorage
     if (selectedWorkspace) {
       localStorage.setItem(
@@ -689,10 +692,9 @@ export function TicketsTable({
     );
 
     try {
-      await apiClient.post(`/workspaces/${selectedWorkspace?._id}/sync`, {
-        added,
-        updated,
-        deleted,
+      await syncWorkspace({
+        workspaceId: selectedWorkspace?._id,
+        changes: { added, updated, deleted }
       });
 
       if (selectedWorkspace) {
@@ -734,9 +736,8 @@ export function TicketsTable({
 
   return (
     <div
-      className={`flex flex-col h-[100%] min-w-0 ${
-        disabled ? "opacity-50 pointer-events-none" : ""
-      }`}
+      className={`flex flex-col h-[100%] min-w-0 ${disabled ? "opacity-50 pointer-events-none" : ""
+        }`}
     >
       <div className="flex gap-1.5 p-2 border-b bg-card flex-shrink-0">
         <Button
@@ -831,177 +832,177 @@ export function TicketsTable({
 
       <div className="flex-1 min-w-0 min-h-0 flex flex-col ">
         <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-light">
-          <Table 
-            style={{ 
+          <Table
+            style={{
               tableLayout: 'fixed',
               width: '100%',
               minWidth: Object.values(columnWidths).reduce((sum, width) => sum + width, 0) + 'px'
             }}
           >
-          <TableHeader>
-            <TableRow>
-              <TableHead
-                className="border-r bg-blue-100 relative whitespace-nowrap"
-                style={{
-                  width: columnWidths.checkbox,
-                  minWidth: columnWidths.checkbox,
-                  maxWidth: columnWidths.checkbox,
-                }}
-              >
-                <Checkbox
-                  aria-label="Select all"
-                  checked={
-                    selectedRows.size === currentData.length && currentData.length > 0
-                  }
-                  onCheckedChange={(checked) =>
-                    handleSelectAll(checked === true)
-                  }
-                />
-                {!isMobile && <div
-                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                  onMouseDown={(e) => handleMouseDown("checkbox", e)}
-                />}
-              </TableHead>
-              {schema.map((col, colIndex) => (
+            <TableHeader>
+              <TableRow>
                 <TableHead
-                  key={`${col.name}-${colIndex}`}
                   className="border-r bg-blue-100 relative whitespace-nowrap"
                   style={{
-                    width: columnWidths[col.name],
-                    minWidth: columnWidths[col.name],
-                    maxWidth: columnWidths[col.name],
+                    width: columnWidths.checkbox,
+                    minWidth: columnWidths.checkbox,
+                    maxWidth: columnWidths.checkbox,
                   }}
                 >
-                  {col.name}
+                  <Checkbox
+                    aria-label="Select all"
+                    checked={
+                      selectedRows.size === currentData.length && currentData.length > 0
+                    }
+                    onCheckedChange={(checked) =>
+                      handleSelectAll(checked === true)
+                    }
+                  />
                   {!isMobile && <div
                     className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
-                    onMouseDown={(e) => handleMouseDown(col.name, e)}
+                    onMouseDown={(e) => handleMouseDown("checkbox", e)}
                   />}
                 </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentData.length === 0 ? (
-              <TableRow>
-                <TableCell 
-                  colSpan={schema.length + 1} 
-                  className="h-48 text-center"
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <p className="text-sm text-muted-foreground">There are no candidates in this workspace yet.</p>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Click &quot;Add Row&quot; to add candidates manually or approve them from the workspace form.
-                    </p>
-                  </div>
-                </TableCell>
+                {schema.map((col, colIndex) => (
+                  <TableHead
+                    key={`${col.name}-${colIndex}`}
+                    className="border-r bg-blue-100 relative whitespace-nowrap"
+                    style={{
+                      width: columnWidths[col.name],
+                      minWidth: columnWidths[col.name],
+                      maxWidth: columnWidths[col.name],
+                    }}
+                  >
+                    {col.name}
+                    {!isMobile && <div
+                      className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50"
+                      onMouseDown={(e) => handleMouseDown(col.name, e)}
+                    />}
+                  </TableHead>
+                ))}
               </TableRow>
-            ) : (
-              currentData.map((row, rowIndex) => (
-                <ContextMenu key={row._id || rowIndex}>
-                  <ContextMenuTrigger asChild>
-                    <TableRow
-                      className="hover:bg-primary/5 cursor-pointer"
-                    >
-                      <TableCell
-                        className="border-r bg-muted/30 cursor-pointer"
-                        style={{ 
-                          width: columnWidths.checkbox,
-                          minWidth: columnWidths.checkbox,
-                          maxWidth: columnWidths.checkbox,
-                        }}
-                        onClick={() =>
-                          handleRowSelect(rowIndex, !selectedRows.has(rowIndex))
-                        }
+            </TableHeader>
+            <TableBody>
+              {currentData.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={schema.length + 1}
+                    className="h-48 text-center"
+                  >
+                    <div className="flex flex-col items-center justify-center">
+                      <p className="text-sm text-muted-foreground">There are no candidates in this workspace yet.</p>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        Click &quot;Add Row&quot; to add candidates manually or approve them from the workspace form.
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                currentData.map((row, rowIndex) => (
+                  <ContextMenu key={row._id || rowIndex}>
+                    <ContextMenuTrigger asChild>
+                      <TableRow
+                        className="hover:bg-primary/5 cursor-pointer"
                       >
-                        <Checkbox
-                          aria-label={`Select row ${rowIndex}`}
-                          checked={selectedRows.has(rowIndex)}
-                          onCheckedChange={(checked) =>
-                            handleRowSelect(rowIndex, checked === true)
+                        <TableCell
+                          className="border-r bg-muted/30 cursor-pointer"
+                          style={{
+                            width: columnWidths.checkbox,
+                            minWidth: columnWidths.checkbox,
+                            maxWidth: columnWidths.checkbox,
+                          }}
+                          onClick={() =>
+                            handleRowSelect(rowIndex, !selectedRows.has(rowIndex))
                           }
-                        />
-                      </TableCell>
-                      {schema.map((col, colIndex) => (
+                        >
+                          <Checkbox
+                            aria-label={`Select row ${rowIndex}`}
+                            checked={selectedRows.has(rowIndex)}
+                            onCheckedChange={(checked) =>
+                              handleRowSelect(rowIndex, checked === true)
+                            }
+                          />
+                        </TableCell>
+                        {schema.map((col, colIndex) => (
 
-<TableCell
-                      key={`${col.name}-${colIndex}`}
-                      className={`border-r bg-background ${col.name === "Feedback" ? "overflow-visible" : "overflow-hidden whitespace-nowrap"}`}
-                      style={{
-                        width: columnWidths[col.name],
-                        minWidth: columnWidths[col.name],
-                        maxWidth: columnWidths[col.name],
-                      }}
-                    >
-                      {col.name === "Status" ? (
-                        <StatusCell
-                          value={row.data[col.name] || "New"}
-                          onChange={(newStatus) => handleStatusChange(rowIndex, newStatus)}
-                          disabled={disabled}
-                        />
-                      ) : col.name === "Informed" ? (
-                        <InformedCell
-                          value={row.data[col.name] || "Not Informed"}
-                          onChange={(newValue) => handleInformedChange(rowIndex, newValue)}
-                          rowData={row.data}
-                        />
-                      ) : col.name === "Feedback" ? (
-                        <FeedbackCell aiScore={row.data["AI Score"] || 0} />
-                      ) : editingCell?.row === rowIndex &&
-                        editingCell?.col === col.name ? (
-                        <Input
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={handleSaveEdit}
-                          onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                          autoFocus
-                          className="h-7"
-                        />
-                      ) : (
-                        <TruncatedCell
-                          content={row.data[col.name]}
-                          onDoubleClick={() =>
-                            handleDoubleClick(
-                              rowIndex,
-                              col.name,
-                              row.data[col.name]
-                            )
-                          }
-                        />
-                      )}
-                    </TableCell>
-                  ))}
-                    </TableRow>
-                  </ContextMenuTrigger>
-                  
-                  {/* Context Menu Content */}
-                  <ContextMenuContent className="w-56">
-                    <ContextMenuLabel className="font-semibold text-blue-600">
-                      Change Status
-                    </ContextMenuLabel>
-                    <ContextMenuSeparator />
-                    
-                    {STATUS_OPTIONS.map((status) => (
-                      <ContextMenuItem
-                        key={status.value}
-                        onClick={() => handleStatusChange(rowIndex, status.value)}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3 w-full">
-                          <div className={`w-3 h-3 rounded-full ${status.color.split(' ')[0].replace('bg-', 'bg-')}`} />
-                          <span className="flex-1">{status.value}</span>
-                          {row.data.Status === status.value && (
-                            <div className="text-blue-600">✓</div>
-                          )}
-                        </div>
-                      </ContextMenuItem>
-                    ))}
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                          <TableCell
+                            key={`${col.name}-${colIndex}`}
+                            className={`border-r bg-background ${col.name === "Feedback" ? "overflow-visible" : "overflow-hidden whitespace-nowrap"}`}
+                            style={{
+                              width: columnWidths[col.name],
+                              minWidth: columnWidths[col.name],
+                              maxWidth: columnWidths[col.name],
+                            }}
+                          >
+                            {col.name === "Status" ? (
+                              <StatusCell
+                                value={row.data[col.name] || "New"}
+                                onChange={(newStatus) => handleStatusChange(rowIndex, newStatus)}
+                                disabled={disabled}
+                              />
+                            ) : col.name === "Informed" ? (
+                              <InformedCell
+                                value={row.data[col.name] || "Not Informed"}
+                                onChange={(newValue) => handleInformedChange(rowIndex, newValue)}
+                                rowData={row.data}
+                              />
+                            ) : col.name === "Feedback" ? (
+                              <FeedbackCell aiScore={row.data["AI Score"] || 0} />
+                            ) : editingCell?.row === rowIndex &&
+                              editingCell?.col === col.name ? (
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={handleSaveEdit}
+                                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                                autoFocus
+                                className="h-7"
+                              />
+                            ) : (
+                              <TruncatedCell
+                                content={row.data[col.name]}
+                                onDoubleClick={() =>
+                                  handleDoubleClick(
+                                    rowIndex,
+                                    col.name,
+                                    row.data[col.name]
+                                  )
+                                }
+                              />
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </ContextMenuTrigger>
+
+                    {/* Context Menu Content */}
+                    <ContextMenuContent className="w-56">
+                      <ContextMenuLabel className="font-semibold text-blue-600">
+                        Change Status
+                      </ContextMenuLabel>
+                      <ContextMenuSeparator />
+
+                      {STATUS_OPTIONS.map((status) => (
+                        <ContextMenuItem
+                          key={status.value}
+                          onClick={() => handleStatusChange(rowIndex, status.value)}
+                          className="cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 w-full">
+                            <div className={`w-3 h-3 rounded-full ${status.color.split(' ')[0].replace('bg-', 'bg-')}`} />
+                            <span className="flex-1">{status.value}</span>
+                            {row.data.Status === status.value && (
+                              <div className="text-blue-600">✓</div>
+                            )}
+                          </div>
+                        </ContextMenuItem>
+                      ))}
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>

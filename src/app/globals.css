@@ -122,10 +122,12 @@
   }
   .scrollbar-light::-webkit-scrollbar-track {
     background-color: #ffffff; /* white track */
+    border: 1px solid #e5e7eb; /* white border (simulated with light grey for visibility or just white) */
   }
   .scrollbar-light::-webkit-scrollbar-thumb {
     background-color: #d1d5db; /* light grey thumb */
     border-radius: 4px;
+    border: 2px solid #ffffff; /* white border around thumb to make it look floating */
   }
   .scrollbar-light::-webkit-scrollbar-thumb:hover {
     background-color: #9ca3af; /* darker grey on hover */
