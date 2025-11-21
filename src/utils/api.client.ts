@@ -68,6 +68,10 @@ apiClient.interceptors.response.use(
         // Handle missing access token or not authenticated error
         if (error.response?.data?.error === "Access token missing in cookies" || error.response?.data?.error === "Not authenticated") {
             if (typeof window !== 'undefined') {
+                // Prevent redirect loop if already on auth page
+                if (window.location.pathname.startsWith('/auth')) {
+                    return Promise.reject(error);
+                }
                 const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
                 window.location.href = `/auth?redirect=${redirectUrl}`;
             }

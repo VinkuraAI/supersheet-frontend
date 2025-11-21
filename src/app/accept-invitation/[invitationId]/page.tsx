@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { workspaceKeys } from "@/features/workspace/hooks/use-workspaces";
 import apiClient from "@/utils/api.client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +28,7 @@ interface InvitationDetails {
 export default function AcceptInvitationPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const invitationId = params.invitationId as string;
 
   const [details, setDetails] = useState<InvitationDetails | null>(null);
@@ -54,11 +57,16 @@ export default function AcceptInvitationPage() {
   const handleAccept = async () => {
     setIsAccepting(true);
     try {
-      const response = await apiClient.post(`/workspaces/invitations/${invitationId}/accept`);
+      await apiClient.post(`/workspaces/invitations/${invitationId}/accept`);
       toast.success("Invitation accepted!");
-      // Redirect to the workspace
-      const workspaceId = response.data.workspaceId || details?.workspace._id;
-      router.push(`/workspace/${workspaceId}`);
+      
+      // Refresh the workspaces list so the new workspace appears in the sidebar
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
+
+      // Redirect to the workspace using the ID from the loaded details
+      if (details?.workspace?._id) {
+        router.push(`/workspace/${details.workspace._id}`);
+      }
     } catch (err: any) {
       console.error("Failed to accept invitation:", err);
       toast.error(err.response?.data?.error || "Failed to accept invitation");
@@ -118,7 +126,7 @@ export default function AcceptInvitationPage() {
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 border-4 border-white shadow-lg ring-1 ring-blue-100">
             <CheckCircle2 className="h-10 w-10 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl font-bold text-slate-800">You've been invited!</CardTitle>
+          <CardTitle className="text-2xl font-bold text-slate-800">You&apos;ve been invited!</CardTitle>
           <CardDescription className="text-slate-500 text-base mt-2">
             <span className="font-semibold text-slate-800">{details.inviter.name}</span> has invited you to join the workspace
           </CardDescription>

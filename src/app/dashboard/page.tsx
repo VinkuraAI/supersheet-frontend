@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense, useRef } from "react";
+import { useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -240,28 +240,10 @@ const CreateWorkspaceCard = ({ canCreate }: { canCreate: boolean }) => {
 
 function DashboardPage() {
   const { workspaces, ownedWorkspaces, sharedWorkspaces, isLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
-  const router = useRouter();
-  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
-    console.log("DashboardPage useEffect - ownedWorkspaces:", ownedWorkspaces.length, "sharedWorkspaces:", sharedWorkspaces.length, "isLoading:", isLoading, "hasChecked:", hasCheckedRef.current);
-
-    if (!hasCheckedRef.current && !isLoading) {
-      const timer = setTimeout(() => {
-        hasCheckedRef.current = true;
-
-        // Only redirect to welcome if user has NO workspaces (neither owned nor shared)
-        if (ownedWorkspaces.length === 0 && sharedWorkspaces.length === 0) {
-          console.log("No workspaces found (owned or shared) after delay, redirecting to /welcome");
-          router.push('/welcome');
-        } else {
-          console.log("Found", ownedWorkspaces.length, "owned and", sharedWorkspaces.length, "shared workspace(s), staying on dashboard");
-        }
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, ownedWorkspaces.length, sharedWorkspaces.length, router, ownedWorkspaces, sharedWorkspaces]);
+    console.log("DashboardPage useEffect - ownedWorkspaces:", ownedWorkspaces.length, "sharedWorkspaces:", sharedWorkspaces.length, "isLoading:", isLoading);
+  }, [isLoading, ownedWorkspaces.length, sharedWorkspaces.length]);
 
   if (isLoading) {
     return (
@@ -354,7 +336,7 @@ function DashboardPage() {
             <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-4">
               <FolderOpen className="w-8 h-8 text-slate-400" />
             </div>
-            <p className="text-slate-600 text-lg font-medium mb-2">You don't have your own workspace</p>
+            <p className="text-slate-600 text-lg font-medium mb-2">You don&apos;t have your own workspace</p>
             <p className="text-slate-500 text-sm">Create your first workspace to get started</p>
           </motion.div>
         ) : (
