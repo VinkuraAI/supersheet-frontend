@@ -10,10 +10,11 @@ export const workspaceKeys = {
   forms: (id: string) => [...workspaceKeys.detail(id), "forms"] as const,
 };
 
-export function useWorkspaces() {
+export function useWorkspaces(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: workspaceKeys.lists(),
     queryFn: workspaceService.getWorkspaces,
+    enabled: options?.enabled,
   });
 }
 

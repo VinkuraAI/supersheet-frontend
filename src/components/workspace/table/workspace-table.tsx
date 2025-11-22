@@ -283,46 +283,9 @@ export function WorkspaceTable({
         if (disabled || !isEditable) return;
 
         const row = currentData[rowIndex];
-        const rowId = row._id;
-        const workspaceId = selectedWorkspace._id;
+        const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Yes' };
 
-        try {
-            // Send email first
-            await sendRowMail({ workspaceId, rowId });
-
-            // Then update status
-            const updatedRowData = { ...row.data, Status: newStatus, Informed: 'Yes' };
-            const newData = currentData.map((item, i) =>
-                i === rowIndex
-                    ? {
-                        ...item,
-                        data: updatedRowData,
-                    }
-                    : item
-            );
-
-            setCurrentData(newData);
-            setData(newData);
-            initialData.current = newData;
-
-            if (selectedWorkspace) {
-                localStorage.setItem(
-                    `workspace-${selectedWorkspace._id}-data`,
-                    JSON.stringify(newData)
-                );
-            }
-        } catch (err) {
-            console.error("Failed to send mail and update status", err);
-        }
-    };
-
-    // Helper function to update status only without sending email
-    const updateStatusOnly = (rowIndex: number, newStatus: string) => {
-        if (disabled || !isEditable) return;
-
-        const row = currentData[rowIndex];
-        const updatedRowData = { ...row.data, Status: newStatus };
-
+        // Optimistically update UI
         const newData = currentData.map((item, i) =>
             i === rowIndex
                 ? {
@@ -341,6 +304,70 @@ export function WorkspaceTable({
                 `workspace-${selectedWorkspace._id}-data`,
                 JSON.stringify(newData)
             );
+        }
+
+        try {
+            // Persist to backend
+            await syncWorkspace({
+                workspaceId: selectedWorkspace._id,
+                changes: {
+                    added: [],
+                    updated: [{
+                        _id: row._id,
+                        data: updatedRowData
+                    }],
+                    deleted: []
+                }
+            });
+        } catch (err) {
+            console.error("Failed to sync status update", err);
+            // Optionally revert UI change here if needed
+        }
+    };
+
+    // Helper function to update status only without sending email
+    const updateStatusOnly = async (rowIndex: number, newStatus: string) => {
+        if (disabled || !isEditable) return;
+
+        const row = currentData[rowIndex];
+        const updatedRowData = { ...row.data, Status: newStatus };
+
+        // Optimistically update UI
+        const newData = currentData.map((item, i) =>
+            i === rowIndex
+                ? {
+                    ...item,
+                    data: updatedRowData,
+                }
+                : item
+        );
+
+        setCurrentData(newData);
+        setData(newData);
+        initialData.current = newData;
+
+        if (selectedWorkspace) {
+            localStorage.setItem(
+                `workspace-${selectedWorkspace._id}-data`,
+                JSON.stringify(newData)
+            );
+        }
+
+        try {
+            // Persist to backend
+            await syncWorkspace({
+                workspaceId: selectedWorkspace._id,
+                changes: {
+                    added: [],
+                    updated: [{
+                        _id: row._id,
+                        data: updatedRowData
+                    }],
+                    deleted: []
+                }
+            });
+        } catch (err) {
+            console.error("Failed to sync status update", err);
         }
     };
 

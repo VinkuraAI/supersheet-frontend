@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Role, canManageWorkspace, canDeleteWorkspace, canManageMembers, canEditContent } from '@/utils/permissions';
 import { useWorkspaces } from '@/features/workspace/hooks/use-workspaces';
 import { Workspace } from '@/features/workspace/services/workspace-service';
+import { useUser } from '@/lib/user-context';
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
@@ -29,7 +30,8 @@ interface WorkspaceContextType {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const { data, isLoading: isQueryLoading } = useWorkspaces();
+  const { user, isLoading: isUserLoading } = useUser();
+  const { data, isLoading: isWorkspaceLoading } = useWorkspaces({ enabled: !!user });
   const [selectedWorkspace, setSelectedWorkspaceState] = useState<Workspace | null>(null);
   const [currentRole, setCurrentRole] = useState<Role | null>(null);
   const router = useRouter();
@@ -79,7 +81,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // URL Sync and Redirect Effect
   useEffect(() => {
-    if (isQueryLoading) return;
+    if (isWorkspaceLoading || isUserLoading) return;
 
     const pathSegments = pathname.split('/');
     const workspaceIdFromUrl = pathSegments.length > 2 && pathSegments[1] === 'workspace' ? pathSegments[2] : null;
@@ -115,7 +117,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [pathname, workspaces, isQueryLoading, router, selectedWorkspace]);
+  }, [pathname, workspaces, isWorkspaceLoading, isUserLoading, router, selectedWorkspace]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {
     setSelectedWorkspaceState(workspace);
@@ -143,7 +145,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setWorkspaces,
       selectedWorkspace,
       setSelectedWorkspace,
-      isLoading: isQueryLoading,
+      isLoading: isWorkspaceLoading || isUserLoading,
       canCreateWorkspace,
       workspaceCount,
       maxWorkspaces,
