@@ -44,13 +44,12 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>('editor');
   const [isOpen, setIsOpen] = useState(false);
-  const [lastInvitedLink, setLastInvitedLink] = useState<string | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
+  const [invitedUsers, setInvitedUsers] = useState<Array<{ email: string, role: Role, link: string }>>([]);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const handleInvite = async () => {
     if (!workspace || !inviteEmail) return;
 
-    setLastInvitedLink(null);
     try {
       const response = await inviteMember({
         id: workspace._id,
@@ -58,12 +57,16 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
         role: inviteRole,
         origin: window.location.origin
       });
+      console.log("Invite response:", response);
       toast.success("Invitation sent successfully");
 
-      // If backend returns invitationId, construct the link
-      if (response.invitationId) {
-        const link = `${window.location.origin}/accept-invitation/${response.invitationId}`;
-        setLastInvitedLink(link);
+      // If backend returns invitationId or _id, construct the link
+      const invId = response.invitationId || response._id;
+      if (invId) {
+        const link = `${window.location.origin}/accept-invitation/${invId}`;
+        setInvitedUsers(prev => [...prev, { email: inviteEmail, role: inviteRole, link }]);
+      } else {
+        console.warn("No invitationId or _id in response");
       }
 
       setInviteEmail("");
@@ -75,13 +78,11 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
     }
   };
 
-  const copyToClipboard = () => {
-    if (lastInvitedLink) {
-      navigator.clipboard.writeText(lastInvitedLink);
-      setIsCopied(true);
-      toast.success("Link copied to clipboard");
-      setTimeout(() => setIsCopied(false), 2000);
-    }
+  const copyToClipboard = (link: string, index: number) => {
+    navigator.clipboard.writeText(link);
+    setCopiedIndex(index);
+    toast.success("Link copied to clipboard");
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   const handleRemoveMember = async (userId: string) => {
@@ -163,28 +164,36 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
                 </Button>
               </div>
 
-              {lastInvitedLink && (
-                <div className="rounded-md bg-muted p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Invitation Link</span>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setLastInvitedLink(null)}>
-                      <span className="sr-only">Close</span>
-                      &times;
+              {invitedUsers.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Invited Users</span>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setInvitedUsers([])}>
+                      Clear All
                     </Button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      readOnly
-                      value={lastInvitedLink}
-                      className="h-8 text-xs font-mono bg-background"
-                    />
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={copyToClipboard}>
-                      {isCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    </Button>
+                  <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                    {invitedUsers.map((user, index) => (
+                      <div key={index} className="rounded-md bg-muted p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">{user.email} <span className="text-xs text-foreground/70 capitalize">({user.role})</span></span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            readOnly
+                            value={user.link}
+                            className="h-8 text-xs font-mono bg-background"
+                          />
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => copyToClipboard(user.link, index)}>
+                            {copiedIndex === index ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Share this link directly if the user doesn't receive the email.
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Share this link directly if the user doesn't receive the email.
-                  </p>
                 </div>
               )}
             </div>

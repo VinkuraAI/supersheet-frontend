@@ -66,7 +66,7 @@ export function UserList({
                 const isMe = member.user._id === myId;
 
                 // Determine if current user can edit this member's role
-                const canEditRole = (isOwner && !isMe) || (isAdmin && !isMemberOwner && !isMe);
+                const canEditRole = (isOwner && !isMe) || (isAdmin && !isMemberOwner && member.role !== 'admin' && !isMe);
 
                 return (
                     <div key={member.user._id} className="flex items-center justify-between">
