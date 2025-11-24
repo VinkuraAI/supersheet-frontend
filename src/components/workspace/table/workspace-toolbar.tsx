@@ -18,6 +18,7 @@ interface WorkspaceToolbarProps {
     workspaceName: string;
     jd: string;
     onJdUpdate: (newJd: string) => void;
+    routePrefix: string;
 }
 
 export function WorkspaceToolbar({
@@ -25,6 +26,7 @@ export function WorkspaceToolbar({
     workspaceName,
     jd,
     onJdUpdate,
+    routePrefix,
 }: WorkspaceToolbarProps) {
     return (
         <div className="bg-white/80 backdrop-blur-md border-b border-slate-200 z-20">
@@ -56,7 +58,7 @@ export function WorkspaceToolbar({
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Link href={`/workspace/${workspaceId}/documents`}>
+                                <Link href={`/${routePrefix}/workspace/${workspaceId}/documents`}>
                                     <Button variant="outline" size="sm" className="h-9 px-3 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-blue-600 transition-colors">
                                         <FolderOpen className="mr-2 h-4 w-4" />
                                         Documents
@@ -72,7 +74,7 @@ export function WorkspaceToolbar({
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Link href={`/workspace/${workspaceId}/forms`}>
+                                <Link href={`/${routePrefix}/workspace/${workspaceId}/forms`}>
                                     <Button variant="outline" size="sm" className="h-9 px-3 rounded-lg border-slate-200 hover:bg-slate-50 hover:text-blue-600 transition-colors">
                                         <FileText className="mr-2 h-4 w-4" />
                                         Forms

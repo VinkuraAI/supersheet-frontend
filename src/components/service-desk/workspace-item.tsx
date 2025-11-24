@@ -84,7 +84,7 @@ export function WorkspaceItem({
                             />
                         </button>
                         <Link
-                            href={`/workspace/${workspace._id}`}
+                            href={`/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}`}
                             onClick={() => onSelect(workspace)}
                             className={cn(
                                 "flex-1 rounded-md px-2 py-1.5 hover:bg-muted block",
@@ -99,7 +99,7 @@ export function WorkspaceItem({
                     <ContextMenuContent>
                         {/* Settings - owner, admin, editor */}
                         {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
-                            <ContextMenuItem onClick={() => router.push(`/workspace/${workspace._id}/settings`)}>
+                            <ContextMenuItem onClick={() => router.push(`/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/settings`)}>
                                 <Settings className="mr-2 h-4 w-4" />
                                 Settings
                             </ContextMenuItem>
@@ -119,7 +119,7 @@ export function WorkspaceItem({
                         {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
                             <ContextMenuItem
                                 onClick={() => {
-                                    window.location.href = `/workspace/${workspace._id}/forms`;
+                                    window.location.href = `/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/forms`;
                                 }}
                                 className="text-blue-600"
                             >
@@ -130,7 +130,7 @@ export function WorkspaceItem({
                         {/* Documents - all roles */}
                         <ContextMenuItem
                             onClick={() => {
-                                window.location.href = `/workspace/${workspace._id}/documents`;
+                                window.location.href = `/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/documents`;
                             }}
                         >
                             <FileText className="mr-2 h-4 w-4" />
@@ -168,7 +168,7 @@ export function WorkspaceItem({
                         forms.map((form: any) => (
                             <Link
                                 key={form._id}
-                                href={`/workspace/${workspace._id}/forms`}
+                                href={`/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/forms`}
                                 className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted text-[0.65rem]"
                             >
                                 <FileText className="h-3 w-3 text-muted-foreground" />
@@ -178,7 +178,7 @@ export function WorkspaceItem({
                     ) : (
                         canPerformAction(workspace, ["owner", "admin", "editor"]) && (
                             <Link
-                                href={`/workspace/${workspace._id}/forms`}
+                                href={`/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/forms`}
                                 className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-blue-50 hover:text-blue-700 text-[0.65rem] font-medium transition-colors group"
                             >
                                 <Plus className="h-3 w-3 group-hover:scale-110 transition-transform" />

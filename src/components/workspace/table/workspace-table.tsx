@@ -46,6 +46,7 @@ export function WorkspaceTable({
     workspaceId,
     jd,
     onJdUpdate,
+    routePrefix,
 }: {
     tickets: any[];
     schema: any[];
@@ -55,6 +56,7 @@ export function WorkspaceTable({
     workspaceId: string;
     jd: string;
     onJdUpdate: (newJd: string) => void;
+    routePrefix: string;
 }) {
     const { selectedWorkspace } = useWorkspace();
     const { user } = useAuth();
@@ -569,6 +571,7 @@ export function WorkspaceTable({
                 workspaceName={workspaceName}
                 jd={jd}
                 onJdUpdate={onJdUpdate}
+                routePrefix={routePrefix}
             />
 
             <WorkspaceActions

@@ -15,6 +15,7 @@ export interface Workspace {
     name: string;
     userId: string;
     members?: Member[];
+    mainFocus?: string;
 }
 
 export interface WorkspaceDetails extends Workspace {

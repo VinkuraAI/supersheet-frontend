@@ -25,6 +25,7 @@ interface WorkspaceContextType {
     canManageMembers: boolean;
     canEditContent: boolean;
   };
+  refreshLocalWorkspaces: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -37,7 +38,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const ownedWorkspaces = useMemo(() => data?.ownedWorkspaces || [], [data]);
+  const [localWorkspaces, setLocalWorkspaces] = useState<Workspace[]>([]);
+
+  // Load local workspaces on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('pm_workspaces');
+    if (stored) {
+      try {
+        setLocalWorkspaces(JSON.parse(stored));
+      } catch (e) {
+        console.error("Failed to parse local workspaces", e);
+      }
+    }
+  }, []);
+
+  const ownedWorkspaces = useMemo(() => [...(data?.ownedWorkspaces || []), ...localWorkspaces], [data, localWorkspaces]);
   const sharedWorkspaces = useMemo(() => data?.sharedWorkspaces || [], [data]);
   const workspaces = useMemo(() => [...ownedWorkspaces, ...sharedWorkspaces], [ownedWorkspaces, sharedWorkspaces]);
 
@@ -150,7 +165,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       workspaceCount,
       maxWorkspaces,
       currentRole,
-      permissions
+      permissions,
+      refreshLocalWorkspaces: () => {
+        const stored = localStorage.getItem('pm_workspaces');
+        if (stored) {
+          try {
+            setLocalWorkspaces(JSON.parse(stored));
+          } catch (e) {
+            console.error("Failed to parse local workspaces", e);
+          }
+        }
+      }
     }}>
       {children}
     </WorkspaceContext.Provider>

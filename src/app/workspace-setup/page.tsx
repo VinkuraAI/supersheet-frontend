@@ -151,7 +151,8 @@ function WorkspaceSetup() {
     try {
       const response = await apiClient.post('/workspaces', payload);
       const newWorkspace = response.data;
-      router.push(`/workspace/${newWorkspace._id}`);
+      const routePrefix = (workType === 'product-management' || workType === 'project-management') ? 'pm' : 'hr';
+      router.push(`/${routePrefix}/workspace/${newWorkspace._id}`);
     } catch (error) {
       console.error('Error creating workspace:', error);
       // Show user-friendly error message

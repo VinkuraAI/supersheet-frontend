@@ -191,7 +191,6 @@ function WelcomePageContent() {
         router.push('/dashboard');
         return;
       }
-      console.log("ho gaya set ");
       setCurrentStep('selection');
     }
   }, [searchParams, canCreateWorkspace, maxWorkspaces, router]);
@@ -208,6 +207,8 @@ function WelcomePageContent() {
     setSelectedWorkType(workTypeId);
     if (workTypeId === 'human-resources') {
       setCurrentStep('hr-options');
+    } else if (workTypeId === 'product-management' || workTypeId === 'project-management') {
+      router.push('/pm/setup');
     } else {
       router.push(`/workspace-setup?workType=${workTypeId}`);
     }
@@ -222,6 +223,8 @@ function WelcomePageContent() {
     if (selectedWorkType) {
       if (selectedWorkType === 'human-resources' && selectedHrOption) {
         router.push(`/workspace-setup?workType=${selectedWorkType}&hrOption=${selectedHrOption}`);
+      } else if (selectedWorkType === 'product-management' || selectedWorkType === 'project-management') {
+        router.push('/pm/setup');
       } else {
         router.push(`/workspace-setup?workType=${selectedWorkType}`);
       }

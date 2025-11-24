@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, Plus, Clock, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 // import apiClient from "@/utils/api.client"; // Removed
 import { Role } from "@/utils/permissions";
@@ -366,6 +366,39 @@ export function SideNav() {
           </div>
         ))}
       </nav>
+
+      {/* Workspace Category Badge */}
+      {selectedWorkspace && (
+        <div className="mt-auto px-2 pb-2">
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-2 rounded-lg border shadow-sm",
+            (selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
+              ? "bg-indigo-50 border-indigo-100 text-indigo-700"
+              : "bg-emerald-50 border-emerald-100 text-emerald-700"
+          )}>
+            <div className={cn(
+              "p-1.5 rounded-md",
+              (selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
+                ? "bg-indigo-100 text-indigo-600"
+                : "bg-emerald-100 text-emerald-600"
+            )}>
+              {(selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
+                ? <Clock className="w-4 h-4" />
+                : <Users className="w-4 h-4" />
+              }
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.65rem] font-bold uppercase tracking-wider opacity-70">Workspace</span>
+              <span className="text-xs font-bold">
+                {(selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
+                  ? "Product Management"
+                  : "Human Resource"
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Rename Confirmation Dialog */}
       <AlertDialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>

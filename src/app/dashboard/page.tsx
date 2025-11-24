@@ -133,7 +133,8 @@ const WorkspaceCard = ({ workspace, index }: { workspace: Workspace; index: numb
   const router = useRouter();
 
   const handleWorkspaceClick = () => {
-    router.push(`/workspace/${workspace._id}`);
+    const routePrefix = (workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management') ? 'pm' : 'hr';
+    router.push(`/${routePrefix}/workspace/${workspace._id}`);
   };
 
   const workType = workTypes.find(w => w.id === workspace.mainFocus);
@@ -242,7 +243,6 @@ function DashboardPage() {
   const { workspaces, ownedWorkspaces, sharedWorkspaces, isLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
 
   useEffect(() => {
-    console.log("DashboardPage useEffect - ownedWorkspaces:", ownedWorkspaces.length, "sharedWorkspaces:", sharedWorkspaces.length, "isLoading:", isLoading);
   }, [isLoading, ownedWorkspaces.length, sharedWorkspaces.length]);
 
   if (isLoading) {

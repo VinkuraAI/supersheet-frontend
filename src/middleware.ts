@@ -14,7 +14,6 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/welcome')) {
     // If the user is trying to create a new workspace, let them through.
     if (request.nextUrl.searchParams.get('create') === 'true') {
-      console.log("????")
       return NextResponse.next();
     }
 
@@ -50,5 +49,5 @@ export async function middleware(request: NextRequest) {
 
 // See "Matching Paths" below to learn more
 export const config = {
-  matcher: ['/workspace/:path*', '/workspace-setup/:path*', '/welcome'],
+  matcher: ['/workspace/:path*', '/hr/workspace/:path*', '/pm/workspace/:path*', '/workspace-setup/:path*', '/welcome'],
 }
