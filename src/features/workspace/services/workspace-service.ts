@@ -33,8 +33,13 @@ export interface WorkspacesResponse {
 
 export const workspaceService = {
     getWorkspaces: async (): Promise<WorkspacesResponse> => {
-        const response = await apiClient.get<WorkspacesResponse>("/workspaces");
-        return response.data;
+        try {
+            const response = await apiClient.get<WorkspacesResponse>("/workspaces");
+            return response.data;
+        } catch (error) {
+            // Suppress console error and return empty lists as fallback
+            return { ownedWorkspaces: [], sharedWorkspaces: [] };
+        }
     },
 
     getWorkspace: async (id: string): Promise<Workspace> => {

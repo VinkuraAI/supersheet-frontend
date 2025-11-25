@@ -26,7 +26,8 @@ const getCsrfToken = () => {
 
 // Fetch token on startup to make it available for subsequent requests.
 // Fetch token on startup to make it available for subsequent requests.
-// getCsrfToken(); // Removed to prevent redundant call on app load. Interceptor handles it.
+// Fetch token on startup to make it available for subsequent requests.
+getCsrfToken();
 
 apiClient.interceptors.request.use(async (config) => {
     // We only need to attach the token to state-changing methods.

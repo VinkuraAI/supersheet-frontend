@@ -11,7 +11,7 @@ interface WorkspaceContextType {
   workspaces: Workspace[];
   ownedWorkspaces: Workspace[];
   sharedWorkspaces: Workspace[];
-  setWorkspaces: React.Dispatch<React.SetStateAction<Workspace[]>>; // Kept for compatibility, but effectively no-op or local override
+  setWorkspaces: React.Dispatch<React.SetStateAction<Workspace[]>>; // Kept for compatibility, but effectively no-op
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
   isLoading: boolean;
@@ -25,7 +25,7 @@ interface WorkspaceContextType {
     canManageMembers: boolean;
     canEditContent: boolean;
   };
-  refreshLocalWorkspaces: () => void;
+  refreshLocalWorkspaces: () => void; // Deprecated, kept for compatibility
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -38,21 +38,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [localWorkspaces, setLocalWorkspaces] = useState<Workspace[]>([]);
-
-  // Load local workspaces on mount
-  useEffect(() => {
-    const stored = localStorage.getItem('pm_workspaces');
-    if (stored) {
-      try {
-        setLocalWorkspaces(JSON.parse(stored));
-      } catch (e) {
-        console.error("Failed to parse local workspaces", e);
-      }
-    }
-  }, []);
-
-  const ownedWorkspaces = useMemo(() => [...(data?.ownedWorkspaces || []), ...localWorkspaces], [data, localWorkspaces]);
+  const ownedWorkspaces = useMemo(() => data?.ownedWorkspaces || [], [data]);
   const sharedWorkspaces = useMemo(() => data?.sharedWorkspaces || [], [data]);
   const workspaces = useMemo(() => [...ownedWorkspaces, ...sharedWorkspaces], [ownedWorkspaces, sharedWorkspaces]);
 
@@ -117,7 +103,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const isAcceptInvitationPage = pathname.startsWith('/accept-invitation');
       const isCandidateFormPage = pathname.startsWith('/candidateForm');
 
-      if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isDashboardPage && !isRootPage && !isReportsPage && !isWorkspaceReportsPage && !isAcceptInvitationPage && !isCandidateFormPage) {
+      const isPMSetupPage = pathname === '/pm/setup';
+
+      if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isPMSetupPage && !isDashboardPage && !isRootPage && !isReportsPage && !isWorkspaceReportsPage && !isAcceptInvitationPage && !isCandidateFormPage) {
         // Only redirect to welcome if user has NO workspaces (neither owned nor shared)
         if (workspaces.length === 0) {
           // Avoid infinite redirect if already on welcome
@@ -167,14 +155,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       currentRole,
       permissions,
       refreshLocalWorkspaces: () => {
-        const stored = localStorage.getItem('pm_workspaces');
-        if (stored) {
-          try {
-            setLocalWorkspaces(JSON.parse(stored));
-          } catch (e) {
-            console.error("Failed to parse local workspaces", e);
-          }
-        }
+        // No-op as we don't use local workspaces anymore
+        console.warn("refreshLocalWorkspaces is deprecated");
       }
     }}>
       {children}
