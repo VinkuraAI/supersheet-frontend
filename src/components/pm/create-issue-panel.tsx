@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import apiClient from "@/utils/api.client";
 
 interface CreateIssuePanelProps {
   isOpen: boolean;
@@ -47,15 +48,16 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
   // Pre-fill data if editing
   useEffect(() => {
     if (initialData) {
+      const data = initialData.data || {};
       setSelectedProjectId(initialData.projectId || selectedWorkspace?._id || "");
-      setIssueType(initialData.issueType || "Task");
-      setStatus(initialData.status || "todo");
-      setSummary(initialData.summary || "");
-      setDescription(initialData.description || "");
-      setPriority(initialData.priority || "Medium");
-      setAssignee(initialData.assignee || "automatic");
-      setReporter(initialData.reporter || "current_user");
-      setLabels(initialData.labels || []);
+      setIssueType(data.issueType || "Task");
+      setStatus(data.status || "todo");
+      setSummary(data.summary || "");
+      setDescription(data.description || "");
+      setPriority(data.priority || "Medium");
+      setAssignee(data.assignee || "automatic");
+      setReporter(data.reporter || "current_user");
+      setLabels(data.labels || []);
     } else {
       // Reset form when opening fresh
       setSelectedProjectId(selectedWorkspace?._id || "");
@@ -71,7 +73,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
     setErrors({});
   }, [initialData, isOpen, selectedWorkspace]);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const targetWorkspace = workspaces.find(w => w._id === selectedProjectId);
 
     // Validation
@@ -97,10 +99,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
       return;
     }
 
-    const newTask = {
-      id: initialData ? initialData.id : `PM-${Date.now().toString().slice(-4)}`,
-      project: targetWorkspace!.name,
-      projectId: targetWorkspace!._id,
+    const taskData = {
       issueType,
       status,
       summary,
@@ -109,31 +108,42 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
       assignee: assignee === "automatic" ? "Unassigned" : assignee === "current_user" ? (user as any)?.name || "User" : assignee,
       reporter: reporter === "current_user" ? (user as any)?.name || "User" : reporter,
       labels,
-      createdAt: initialData ? initialData.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const storageKey = `pm_tasks_${targetWorkspace!._id}`;
-    const existingTasks = JSON.parse(localStorage.getItem(storageKey) || "[]");
-
-    let updatedTasks;
-    if (initialData) {
-      updatedTasks = existingTasks.map((t: any) => t.id === initialData.id ? newTask : t);
-    } else {
-      updatedTasks = [...existingTasks, newTask];
+    try {
+      if (initialData) {
+        // Update existing task
+        await apiClient.put(`/workspaces/${targetWorkspace!._id}/rows/${initialData._id}`, {
+          rowData: taskData
+        });
+        toast({
+          title: "Task Updated",
+          description: `Task has been updated successfully.`,
+        });
+      } else {
+        // Create new task
+        await apiClient.post(`/workspaces/${targetWorkspace!._id}/rows`, {
+          data: {
+             ...taskData,
+             createdAt: new Date().toISOString(),
+          }
+        });
+        toast({
+          title: "Task Created",
+          description: `Task has been created successfully in ${targetWorkspace!.name}.`,
+        });
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error("Failed to save task", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save task. Please try again.",
+      });
     }
-
-    localStorage.setItem(storageKey, JSON.stringify(updatedTasks));
-    
-    // Dispatch event to notify other components
-    window.dispatchEvent(new Event("storage"));
-    
-    toast({
-      title: initialData ? "Task Updated" : "Task Created",
-      description: `Task ${newTask.id} has been ${initialData ? "updated" : "created"} successfully in ${targetWorkspace!.name}.`,
-    });
-
-    onClose();
   };
 
   const handleLabelKeyDown = (e: React.KeyboardEvent) => {

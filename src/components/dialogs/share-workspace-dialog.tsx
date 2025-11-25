@@ -57,7 +57,6 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
         role: inviteRole,
         origin: window.location.origin
       });
-      console.log("Invite response:", response);
       toast.success("Invitation sent successfully");
 
       // If backend returns invitationId or _id, construct the link

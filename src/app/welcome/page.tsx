@@ -207,10 +207,6 @@ function WelcomePageContent() {
     setSelectedWorkType(workTypeId);
     if (workTypeId === 'human-resources') {
       setCurrentStep('hr-options');
-    } else if (workTypeId === 'product-management' || workTypeId === 'project-management') {
-      router.push('/pm/setup');
-    } else {
-      router.push(`/workspace-setup?workType=${workTypeId}`);
     }
   };
 
