@@ -375,8 +375,6 @@ export default function WorkspaceReportsPage() {
       departmentStats
     };
 
-    console.log('=== FINAL ANALYTICS RESULT ===');
-    console.log(result);
     
     return result;
   };

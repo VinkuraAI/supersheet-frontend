@@ -16,6 +16,7 @@ interface InvitationDetails {
   workspace: {
     _id: string;
     name: string;
+    mainFocus: string;
   };
   inviter: {
     name: string;
@@ -65,7 +66,8 @@ export default function AcceptInvitationPage() {
 
       // Redirect to the workspace using the ID from the loaded details
       if (details?.workspace?._id) {
-        router.push(`/workspace/${details.workspace._id}`);
+        const isPM = details.workspace.mainFocus === 'product-management' || details.workspace.mainFocus === 'project-management';
+        router.push(`/${isPM ? 'pm' : 'hr'}/workspace/${details.workspace._id}`);
       }
     } catch (err: any) {
       console.error("Failed to accept invitation:", err);

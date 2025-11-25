@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
         }
       }
     } catch (error) {
-      console.error("Middleware error fetching workspaces:", error);
+      // console.error("Middleware error fetching workspaces:", error);
       // If the API call fails for any reason, it's safest to let them proceed
       // to the welcome page instead of blocking them.
       return NextResponse.next();

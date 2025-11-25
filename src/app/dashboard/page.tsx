@@ -340,12 +340,31 @@ function DashboardPage() {
             <p className="text-slate-500 text-sm">Create your first workspace to get started</p>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ownedWorkspaces.map((ws, index) => (
-              <WorkspaceCard key={ws._id} workspace={ws} index={index} />
-            ))}
-            <CreateWorkspaceCard canCreate={canCreateWorkspace} />
-          </div>
+          <>
+            {workspaces.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No workspaces found</h3>
+                <p className="text-slate-500 mb-6">Get started by creating your first workspace.</p>
+                <Button onClick={() => router.push('/welcome?create=true')}>
+                  Create Workspace
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {ownedWorkspaces.map((workspace) => (
+                  <WorkspaceCard key={workspace._id} workspace={workspace} isOwner={true} />
+                ))}
+                {sharedWorkspaces.map((workspace) => (
+                  <WorkspaceCard key={workspace._id} workspace={workspace} isOwner={false} />
+                ))}
+                
+                {/* Always show create card if limit not reached */}
+                {canCreateWorkspace && (
+                  <CreateWorkspaceCard onClick={() => router.push('/welcome?create=true')} />
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
