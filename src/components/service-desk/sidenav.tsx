@@ -188,9 +188,10 @@ export function SideNav() {
   return (
     <>
       <Toaster richColors />
-      <nav className="text-xs p-2 space-y-4">
+      <nav className="text-xs p-2 space-y-4 w-64 border-r border-slate-200 h-full bg-slate-50/50 flex flex-col">
+        <div className="flex-1 overflow-y-auto">
         {initialSections.map((section) => (
-          <div key={section.title}>
+          <div key={section.title} className="mb-4">
             <div className="px-2 pb-2 text-[0.7rem] font-semibold text-slate-400 uppercase tracking-wider">
               {section.title}
             </div>
@@ -365,40 +366,41 @@ export function SideNav() {
             )}
           </div>
         ))}
-      </nav>
+        </div>
 
-      {/* Workspace Category Badge */}
-      {selectedWorkspace && (
-        <div className="mt-auto px-2 pb-2">
-          <div className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-lg border shadow-sm",
-            (selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
-              ? "bg-indigo-50 border-indigo-100 text-indigo-700"
-              : "bg-emerald-50 border-emerald-100 text-emerald-700"
-          )}>
+        {/* Workspace Category Badge */}
+        {selectedWorkspace && (
+          <div className="mt-auto px-2 pb-2">
             <div className={cn(
-              "p-1.5 rounded-md",
+              "flex items-center gap-2 px-3 py-2 rounded-lg border shadow-sm",
               (selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
-                ? "bg-indigo-100 text-indigo-600"
-                : "bg-emerald-100 text-emerald-600"
+                ? "bg-indigo-50 border-indigo-100 text-indigo-700"
+                : "bg-emerald-50 border-emerald-100 text-emerald-700"
             )}>
-              {(selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
-                ? <Clock className="w-4 h-4" />
-                : <Users className="w-4 h-4" />
-              }
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[0.65rem] font-bold uppercase tracking-wider opacity-70">Workspace</span>
-              <span className="text-xs font-bold">
+              <div className={cn(
+                "p-1.5 rounded-md",
+                (selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
+                  ? "bg-indigo-100 text-indigo-600"
+                  : "bg-emerald-100 text-emerald-600"
+              )}>
                 {(selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
-                  ? "Product Management"
-                  : "Human Resource"
+                  ? <Clock className="w-4 h-4" />
+                  : <Users className="w-4 h-4" />
                 }
-              </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[0.65rem] font-bold uppercase tracking-wider opacity-70">Workspace</span>
+                <span className="text-xs font-bold">
+                  {(selectedWorkspace.mainFocus === 'product-management' || selectedWorkspace.mainFocus === 'project-management')
+                    ? "Product Management"
+                    : "Human Resource"
+                  }
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </nav>
 
       {/* Rename Confirmation Dialog */}
       <AlertDialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>

@@ -11,30 +11,16 @@ interface PMListViewProps {
   workspaceId: string;
   onCreateClick: () => void;
   onEditTask: (task: any) => void;
+  tasks: any[];
 }
 
-export function PMListView({ workspaceId, onCreateClick, onEditTask }: PMListViewProps) {
-  const [tasks, setTasks] = useState<any[]>([]);
+export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks }: PMListViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const loadTasks = () => {
-    const storedTasks = localStorage.getItem(`pm_tasks_${workspaceId}`);
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks));
-    } else {
-      setTasks([]);
-    }
-  };
-
-  useEffect(() => {
-    loadTasks();
-    const handleStorageChange = () => loadTasks();
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, [workspaceId]);
+  // Removed LocalStorage logic as we now receive tasks via props
 
   const filteredTasks = tasks.filter(t => 
-    (t.summary || t.content || "").toLowerCase().includes(searchQuery.toLowerCase())
+    (t.data?.summary || t.data?.content || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -97,63 +83,63 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask }: PMListVie
             {/* Task Rows */}
             {filteredTasks.map((task) => (
               <tr 
-                key={task.id} 
+                key={task._id || task.id} 
                 className="hover:bg-slate-50 group transition-colors cursor-pointer"
                 onClick={() => onEditTask(task)}
               >
                 <td className="px-6 py-3">
-                  <div className={cn(
+                   <div className={cn(
                      "w-4 h-4 rounded-sm flex items-center justify-center",
-                     task.issueType === "Bug" ? "bg-red-500" :
-                     task.issueType === "Story" ? "bg-green-500" :
-                     task.issueType === "Epic" ? "bg-purple-500" :
+                     task.data?.issueType === "Bug" ? "bg-red-500" :
+                     task.data?.issueType === "Story" ? "bg-green-500" :
+                     task.data?.issueType === "Epic" ? "bg-purple-500" :
                      "bg-blue-500"
                    )}>
                      <div className="w-2 h-2 bg-white rounded-full" />
                   </div>
                 </td>
                 <td className="px-6 py-3">
-                  <span className="text-sm text-slate-500 font-medium hover:underline">{task.id}</span>
+                  <span className="text-sm text-slate-500 font-medium hover:underline">{task._id.slice(-4)}</span>
                 </td>
                 <td className="px-6 py-3">
-                  <span className="text-sm text-slate-700 font-medium group-hover:text-blue-600">{task.summary || task.content}</span>
+                  <span className="text-sm text-slate-700 font-medium group-hover:text-blue-600">{task.data?.summary || "Untitled"}</span>
                 </td>
                 <td className="px-6 py-3">
                   <span className={cn(
                     "text-xs font-bold px-2 py-0.5 rounded uppercase",
-                    task.status === "todo" ? "bg-slate-100 text-slate-600" :
-                    task.status === "ongoing" || task.status === "in_progress" ? "bg-blue-100 text-blue-700" :
-                    task.status === "completed" || task.status === "done" ? "bg-emerald-100 text-emerald-700" :
-                    task.status === "in_review" ? "bg-purple-100 text-purple-700" :
-                    task.status === "blocked" ? "bg-red-100 text-red-700" :
+                    task.data?.status === "todo" ? "bg-slate-100 text-slate-600" :
+                    task.data?.status === "in_progress" ? "bg-blue-100 text-blue-700" :
+                    task.data?.status === "done" ? "bg-emerald-100 text-emerald-700" :
+                    task.data?.status === "in_review" ? "bg-purple-100 text-purple-700" :
+                    task.data?.status === "blocked" ? "bg-red-100 text-red-700" :
                     "bg-slate-100 text-slate-600"
                   )}>
-                    {task.status?.replace('_', ' ')}
+                    {task.data?.status || "todo"}
                   </span>
                 </td>
                 <td className="px-6 py-3">
                   <div className="flex items-center gap-2">
-                    {(!task.assignee || task.assignee === "Unassigned") ? (
+                    {(!task.data?.assignee || task.data?.assignee === "Unassigned") ? (
                       <UserCircle2 className="w-6 h-6 text-slate-300" />
                     ) : (
                       <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[0.65rem] font-bold">
-                        {task.assignee.slice(0, 2).toUpperCase()}
+                        {task.data.assignee.slice(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <span className="text-sm text-slate-600">{task.assignee || "Unassigned"}</span>
+                    <span className="text-sm text-slate-600">{task.data?.assignee || "Unassigned"}</span>
                   </div>
                 </td>
                 <td className="px-6 py-3">
-                  <span className="text-sm text-slate-500">{task.due || "None"}</span>
+                  <span className="text-sm text-slate-500">{task.data?.dueDate ? new Date(task.data.dueDate).toLocaleDateString() : "None"}</span>
                 </td>
                 <td className="px-6 py-3">
                    <div className="flex items-center gap-2">
-                      {task.priority === "Highest" ? <ChevronDown className="w-4 h-4 text-red-500 rotate-180" /> :
-                       task.priority === "High" ? <ChevronDown className="w-4 h-4 text-orange-500 rotate-180" /> :
-                       task.priority === "Medium" ? <div className="w-4 h-4 flex items-center justify-center"><div className="w-3 h-0.5 bg-yellow-500" /></div> :
+                      {task.data?.priority === "Highest" ? <ChevronDown className="w-4 h-4 text-red-500 rotate-180" /> :
+                       task.data?.priority === "High" ? <ChevronDown className="w-4 h-4 text-orange-500 rotate-180" /> :
+                       task.data?.priority === "Medium" ? <div className="w-4 h-4 flex items-center justify-center"><div className="w-3 h-0.5 bg-yellow-500" /></div> :
                        <ChevronDown className="w-4 h-4 text-blue-500" />
                       }
-                      <span className="text-sm text-slate-600">{task.priority || "Medium"}</span>
+                      <span className="text-sm text-slate-600">{task.data?.priority || "Medium"}</span>
                    </div>
                 </td>
               </tr>

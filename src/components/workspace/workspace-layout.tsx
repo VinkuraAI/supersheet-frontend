@@ -114,7 +114,7 @@ function PageContent({
         {/* Left sidebar - fixed and toggleable */}
         <aside
           className={`
-            fixed left-0 top-[49px] bottom-0 z-30 w-[195px] 
+            fixed left-0 top-[49px] bottom-0 z-30 w-64 
             border-r bg-card transition-transform duration-200 ease-in-out
             ${leftSidebarOpen && !isMobile ? 'translate-x-0' : '-translate-x-full'}
           `}
@@ -126,7 +126,7 @@ function PageContent({
         <div
           className={`
             flex-1 transition-all duration-200 ease-in-out overflow-hidden h-full
-            ${leftSidebarOpen && !isMobile ? 'ml-[195px]' : 'ml-0'}
+            ${leftSidebarOpen && !isMobile ? 'ml-64' : 'ml-0'}
             ${rightSidebarOpen && !isMobile ? 'mr-[320px]' : 'mr-0'}
           `}
         >
