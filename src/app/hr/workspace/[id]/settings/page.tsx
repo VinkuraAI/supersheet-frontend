@@ -40,7 +40,6 @@ function UserManagementSection({ workspaceId }: { workspaceId: string }) {
         role: inviteRole,
         origin: window.location.origin
       });
-      console.log("Invite response (settings):", response);
       toast.success("Invitation sent successfully");
 
       const invId = response.invitationId || response._id;

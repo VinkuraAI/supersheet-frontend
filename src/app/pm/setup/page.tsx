@@ -15,10 +15,13 @@ interface TeamMember {
   isLeader: boolean;
 }
 
+import { useQueryClient } from "@tanstack/react-query";
+
 export default function PMSetupPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { canCreateWorkspace, maxWorkspaces, refreshLocalWorkspaces } = useWorkspace();
+  const queryClient = useQueryClient();
   
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   
@@ -132,47 +135,50 @@ export default function PMSetupPage() {
   const handleCreateWorkspace = async () => {
     if (!user) return;
     
+    // 1. Create Workspace
     const payload = {
       name: workspaceName,
       userId: user.id,
-      mainFocus: 'project-management', // or product-management based on selection? defaulting to PM
-      teamName,
-      projectDetails,
-      members: members.map(m => ({
-        name: m.name,
-        email: m.email,
-        role: m.role, // Map to system roles if needed
-        isLeader: m.isLeader
-      })),
-      // Add other required fields
+      mainFocus: 'project-management',
+      primaryHRNeed: 'Project Management', // Default for PM
       jd: projectDetails,
       requirements: [],
       table: {},
     };
 
     try {
-      // Create local workspace object
-      const newWorkspace = {
-        _id: `local_${Date.now()}`,
-        ...payload,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      const response = await apiClient.post('/workspaces', payload);
+      const newWorkspace = response.data;
 
-      // Save to localStorage
-      const stored = localStorage.getItem('pm_workspaces');
-      const workspaces = stored ? JSON.parse(stored) : [];
-      workspaces.push(newWorkspace);
-      localStorage.setItem('pm_workspaces', JSON.stringify(workspaces));
-
-      // Refresh context
-      refreshLocalWorkspaces();
+      // 2. Invite Members (if any)
+      // Filter out empty members and the creator (if they added themselves)
+      const membersToInvite = members.filter(m => m.email && m.email !== user.email);
       
-      // Redirect
-      router.push(`/pm/workspace/${newWorkspace._id}`);
+      if (membersToInvite.length > 0) {
+        // We do this sequentially or in parallel. Parallel is faster.
+        await Promise.all(membersToInvite.map(async (member) => {
+          try {
+            await apiClient.post(`/workspaces/${newWorkspace._id}/invite`, {
+              email: member.email,
+              role: member.role.toLowerCase(), // Ensure lowercase for API enum
+              origin: window.location.origin
+            });
+          } catch (inviteError) {
+            console.error(`Failed to invite ${member.email}:`, inviteError);
+            // We continue even if one invite fails, but maybe show a toast?
+          }
+        }));
+      }
+
+      // 3. Refresh Context (React Query should handle this if we invalidate queries)
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      
+      // 4. Redirect
+      router.push('/dashboard');
     } catch (error) {
       console.error('Error creating workspace:', error);
-      alert('Failed to create workspace.');
+      const errorMessage = (error as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Failed to create workspace. Please try again.';
+      alert(errorMessage);
     }
   };
 

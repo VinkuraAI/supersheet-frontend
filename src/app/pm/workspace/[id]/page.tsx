@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useWorkspace } from "@/lib/workspace-context";
 import { workspaceService } from "@/features/workspace/services/workspace-service";
+import apiClient from "@/utils/api.client";
 import { SideNav } from "@/components/service-desk/sidenav";
 import { PMTopNav } from "@/components/pm/pm-top-nav";
 import { KanbanBoard } from "@/components/pm/kanban-board";
@@ -19,33 +20,25 @@ export default function PMWorkspacePage() {
   const [currentView, setCurrentView] = useState('summary');
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
+
+  const loadWorkspace = async () => {
+    if (params.id) {
+      try {
+        const details = await workspaceService.getWorkspaceDetails(params.id as string);
+        setSelectedWorkspace(details);
+        setTasks(details.table?.rows || []);
+      } catch (error) {
+        console.error("Failed to load workspace", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
-    const loadWorkspace = async () => {
-      if (params.id) {
-        try {
-          // In a real app, we would fetch by ID. 
-          // For now, we'll try to find it in the list or just set the ID
-          const workspaces = await workspaceService.getWorkspaces();
-          const found = workspaces.ownedWorkspaces.find(w => w._id === params.id) || 
-                        workspaces.sharedWorkspaces.find(w => w._id === params.id);
-          
-          if (found) {
-            setSelectedWorkspace(found);
-          } else {
-            // Fallback if not found in list (e.g. direct link)
-            // We might need a getWorkspaceById service method
-          }
-        } catch (error) {
-          console.error("Failed to load workspace", error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
     loadWorkspace();
-  }, [params.id, setSelectedWorkspace]);
+  }, [params.id]);
 
   const handleCreateClick = () => {
     setEditingTask(null);
@@ -60,6 +53,35 @@ export default function PMWorkspacePage() {
   const handleClosePanel = () => {
     setIsCreatePanelOpen(false);
     setEditingTask(null);
+    // Refresh tasks after close (in case created/edited)
+    loadWorkspace();
+  };
+
+  const handleTaskMove = async (result: any) => {
+    const { draggableId, destination } = result;
+    if (!destination) return;
+
+    const newStatus = destination.droppableId;
+    
+    // Optimistic update
+    const updatedTasks = tasks.map(t => 
+      t._id === draggableId ? { ...t, data: { ...t.data, status: newStatus } } : t
+    );
+    setTasks(updatedTasks);
+
+    try {
+      // Find the row to update
+      const taskToUpdate = tasks.find(t => t._id === draggableId);
+      if (taskToUpdate) {
+        await apiClient.put(`/workspaces/${params.id}/rows/${draggableId}`, {
+          rowData: { ...taskToUpdate.data, status: newStatus }
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update task status", error);
+      // Revert on error
+      loadWorkspace();
+    }
   };
 
   if (isLoading) {
@@ -83,12 +105,15 @@ export default function PMWorkspacePage() {
               workspaceId={params.id as string} 
               onCreateClick={handleCreateClick}
               onEditTask={handleEditTask}
+              tasks={tasks}
+              onTaskMove={handleTaskMove}
             />
           )}
           {currentView === 'summary' && (
             <PMSummaryView 
               workspaceName={selectedWorkspace?.name || "Workspace"} 
               onCreateClick={handleCreateClick} 
+              tasks={tasks}
             />
           )}
           {currentView === 'list' && (
@@ -96,6 +121,7 @@ export default function PMWorkspacePage() {
               workspaceId={params.id as string} 
               onCreateClick={handleCreateClick}
               onEditTask={handleEditTask}
+              tasks={tasks}
             />
           )}
           {/* Add other views here */}

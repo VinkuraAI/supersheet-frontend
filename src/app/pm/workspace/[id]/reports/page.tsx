@@ -166,17 +166,11 @@ export default function WorkspaceReportsPage() {
     
     setDataLoading(true);
     try {
-      console.log('Fetching analytics for workspace:', selectedWorkspace._id);
       const response = await apiClient.get<WorkspaceData>(`/workspaces/${selectedWorkspace._id}`);
       const workspaceData = response.data;
       
-      console.log('Raw workspace data:', workspaceData);
-      
       const rows = workspaceData.table?.rows || [];
       const schema = workspaceData.table?.schema || [];
-
-      console.log('Extracted rows count:', rows.length);
-      console.log('Extracted schema:', schema);
 
       if (rows.length === 0) {
         console.log('No rows found in workspace data');
@@ -225,12 +219,8 @@ export default function WorkspaceReportsPage() {
 
   // Calculate analytics from workspace rows
   const calculateAnalytics = (rows: any[], schema: any[]): AnalyticsData => {
-    console.log('=== ANALYTICS CALCULATION START ===');
-    console.log('Input rows:', rows.length);
-    console.log('Input schema:', schema);
     
     if (!rows.length) {
-      console.log('No rows to process, returning empty analytics');
       return {
         totalCandidates: 0,
         hiredCandidates: 0,
