@@ -190,116 +190,160 @@ export function SideNav() {
       <Toaster richColors />
       <nav className="text-xs p-2 space-y-4 w-64 border-r border-slate-200 h-full bg-slate-50/50 flex flex-col">
         <div className="flex-1 overflow-y-auto">
-        {initialSections.map((section) => (
-          <div key={section.title} className="mb-4">
-            <div className="px-2 pb-2 text-[0.7rem] font-semibold text-slate-400 uppercase tracking-wider">
-              {section.title}
-            </div>
-            <ul className="space-y-0.5">
-              {section.items.map((item: any) => (
-                <li key={item.label}>
-                  {item.action === "create-workspace" ? (
+          {initialSections.map((section) => (
+            <div key={section.title} className="mb-4">
+              <div className="px-2 pb-2 text-[0.7rem] font-semibold text-slate-400 uppercase tracking-wider">
+                {section.title}
+              </div>
+              <ul className="space-y-0.5">
+                {section.items.map((item: any) => (
+                  <li key={item.label}>
+                    {item.action === "create-workspace" ? (
+                      <button
+                        onClick={() =>
+                          canCreateWorkspace && setShowCreateWorkspaceDialog(true)
+                        }
+                        disabled={!canCreateWorkspace}
+                        title={
+                          !canCreateWorkspace
+                            ? `Workspace limit reached (${workspaceCount}/${maxWorkspaces})`
+                            : "Create new workspace"
+                        }
+                        className={cn(
+                          "w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-all duration-200",
+                          canCreateWorkspace
+                            ? "hover:bg-blue-50 text-slate-600 hover:text-blue-700 font-medium cursor-pointer group"
+                            : "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-5 h-5 rounded-md flex items-center justify-center transition-colors",
+                          canCreateWorkspace ? "bg-slate-100 group-hover:bg-blue-100 text-slate-500 group-hover:text-blue-600" : "bg-slate-100"
+                        )}>
+                          <Plus className="h-3.5 w-3.5" />
+                        </div>
+                        {item.label}
+                      </button>
+                    ) : item.label === "Reports" ? (
+                      <Link
+                        href="/reports"
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all duration-200",
+                          item.active
+                            ? "bg-blue-50 text-blue-700 font-semibold"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        )}
+                        aria-current={item.active ? "page" : undefined}
+                      >
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full transition-colors",
+                          item.active ? "bg-blue-500" : "bg-slate-300"
+                        )} />
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href="#"
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all duration-200",
+                          item.active
+                            ? "bg-blue-50 text-blue-700 font-semibold"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        )}
+                        aria-current={item.active ? "page" : undefined}
+                      >
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full transition-colors",
+                          item.active ? "bg-blue-500" : "bg-slate-300"
+                        )} />
+                        {item.label}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {section.title === "Views" && (
+                <>
+                  {/* Own Workspaces Section */}
+                  <div className="mt-4">
                     <button
-                      onClick={() =>
-                        canCreateWorkspace && setShowCreateWorkspaceDialog(true)
-                      }
-                      disabled={!canCreateWorkspace}
-                      title={
-                        !canCreateWorkspace
-                          ? `Workspace limit reached (${workspaceCount}/${maxWorkspaces})`
-                          : "Create new workspace"
-                      }
-                      className={cn(
-                        "w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-all duration-200",
-                        canCreateWorkspace
-                          ? "hover:bg-blue-50 text-slate-600 hover:text-blue-700 font-medium cursor-pointer group"
-                          : "opacity-50 cursor-not-allowed"
-                      )}
+                      onClick={toggleOwnWorkspaces}
+                      className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 transition-colors group"
                     >
-                      <div className={cn(
-                        "w-5 h-5 rounded-md flex items-center justify-center transition-colors",
-                        canCreateWorkspace ? "bg-slate-100 group-hover:bg-blue-100 text-slate-500 group-hover:text-blue-600" : "bg-slate-100"
-                      )}>
-                        <Plus className="h-3.5 w-3.5" />
-                      </div>
-                      {item.label}
+                      <span className="font-semibold text-slate-700 group-hover:text-slate-900">Own Workspaces</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transform transition-transform duration-200",
+                          isOwnWorkspacesOpen ? "rotate-180" : ""
+                        )}
+                      />
                     </button>
-                  ) : item.label === "Reports" ? (
-                    <Link
-                      href="/reports"
-                      className={cn(
-                        "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all duration-200",
-                        item.active
-                          ? "bg-blue-50 text-blue-700 font-semibold"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      )}
-                      aria-current={item.active ? "page" : undefined}
+                    {isOwnWorkspacesOpen && (
+                      <div className="pl-2 pt-1">
+                        {isLoading ? (
+                          <p className="px-2 py-1.5 text-xs text-slate-400 italic">
+                            Loading...
+                          </p>
+                        ) : ownedWorkspaces.length > 0 ? (
+                          <ul className="space-y-0.5">
+                            {ownedWorkspaces.map((workspace) => (
+                              <li key={workspace._id}>
+                                {editingWorkspaceId === workspace._id ? (
+                                  <Input
+                                    ref={inputRef}
+                                    value={newWorkspaceName}
+                                    onChange={(e) =>
+                                      setNewWorkspaceName(e.target.value)
+                                    }
+                                    onKeyDown={handleInputKeyDown}
+                                    onBlur={handleInputBlur}
+                                    className="h-7 text-xs"
+                                  />
+                                ) : (
+                                  <WorkspaceItem
+                                    workspace={workspace}
+                                    isSelected={selectedWorkspace?._id === workspace._id}
+                                    onRename={handleRenameClick}
+                                    onDelete={handleDeleteClick}
+                                    onSelect={handleWorkspaceClick}
+                                  />
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="px-2 py-1.5 text-xs text-slate-400 italic">
+                            No own workspaces.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Shared Workspaces Section */}
+                  <div className="mt-2">
+                    <button
+                      onClick={toggleSharedWorkspaces}
+                      className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 transition-colors group"
                     >
-                      <div className={cn(
-                        "w-1.5 h-1.5 rounded-full transition-colors",
-                        item.active ? "bg-blue-500" : "bg-slate-300"
-                      )} />
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <a
-                      href="#"
-                      className={cn(
-                        "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all duration-200",
-                        item.active
-                          ? "bg-blue-50 text-blue-700 font-semibold"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      )}
-                      aria-current={item.active ? "page" : undefined}
-                    >
-                      <div className={cn(
-                        "w-1.5 h-1.5 rounded-full transition-colors",
-                        item.active ? "bg-blue-500" : "bg-slate-300"
-                      )} />
-                      {item.label}
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {section.title === "Views" && (
-              <>
-                {/* Own Workspaces Section */}
-                <div className="mt-4">
-                  <button
-                    onClick={toggleOwnWorkspaces}
-                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 transition-colors group"
-                  >
-                    <span className="font-semibold text-slate-700 group-hover:text-slate-900">Own Workspaces</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transform transition-transform duration-200",
-                        isOwnWorkspacesOpen ? "rotate-180" : ""
-                      )}
-                    />
-                  </button>
-                  {isOwnWorkspacesOpen && (
-                    <div className="pl-2 pt-1">
-                      {isLoading ? (
-                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
-                          Loading...
-                        </p>
-                      ) : ownedWorkspaces.length > 0 ? (
-                        <ul className="space-y-0.5">
-                          {ownedWorkspaces.map((workspace) => (
-                            <li key={workspace._id}>
-                              {editingWorkspaceId === workspace._id ? (
-                                <Input
-                                  ref={inputRef}
-                                  value={newWorkspaceName}
-                                  onChange={(e) =>
-                                    setNewWorkspaceName(e.target.value)
-                                  }
-                                  onKeyDown={handleInputKeyDown}
-                                  onBlur={handleInputBlur}
-                                  className="h-7 text-xs"
-                                />
-                              ) : (
+                      <span className="font-semibold text-slate-700 group-hover:text-slate-900">Shared Workspaces</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transform transition-transform duration-200",
+                          isSharedWorkspacesOpen ? "rotate-180" : ""
+                        )}
+                      />
+                    </button>
+                    {isSharedWorkspacesOpen && (
+                      <div className="pl-2 pt-1">
+                        {isLoading ? (
+                          <p className="px-2 py-1.5 text-xs text-slate-400 italic">
+                            Loading...
+                          </p>
+                        ) : sharedWorkspaces.length > 0 ? (
+                          <ul className="space-y-0.5">
+                            {sharedWorkspaces.map((workspace) => (
+                              <li key={workspace._id}>
                                 <WorkspaceItem
                                   workspace={workspace}
                                   isSelected={selectedWorkspace?._id === workspace._id}
@@ -307,65 +351,21 @@ export function SideNav() {
                                   onDelete={handleDeleteClick}
                                   onSelect={handleWorkspaceClick}
                                 />
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
-                          No own workspaces.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Shared Workspaces Section */}
-                <div className="mt-2">
-                  <button
-                    onClick={toggleSharedWorkspaces}
-                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 transition-colors group"
-                  >
-                    <span className="font-semibold text-slate-700 group-hover:text-slate-900">Shared Workspaces</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transform transition-transform duration-200",
-                        isSharedWorkspacesOpen ? "rotate-180" : ""
-                      )}
-                    />
-                  </button>
-                  {isSharedWorkspacesOpen && (
-                    <div className="pl-2 pt-1">
-                      {isLoading ? (
-                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
-                          Loading...
-                        </p>
-                      ) : sharedWorkspaces.length > 0 ? (
-                        <ul className="space-y-0.5">
-                          {sharedWorkspaces.map((workspace) => (
-                            <li key={workspace._id}>
-                              <WorkspaceItem
-                                workspace={workspace}
-                                isSelected={selectedWorkspace?._id === workspace._id}
-                                onRename={handleRenameClick}
-                                onDelete={handleDeleteClick}
-                                onSelect={handleWorkspaceClick}
-                              />
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="px-2 py-1.5 text-xs text-slate-400 italic">
-                          No shared workspaces.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        ))}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="px-2 py-1.5 text-xs text-slate-400 italic">
+                            No shared workspaces.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Workspace Category Badge */}

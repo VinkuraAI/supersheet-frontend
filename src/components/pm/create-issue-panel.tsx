@@ -22,14 +22,15 @@ interface CreateIssuePanelProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: any;
+  onDelete?: (taskId: string) => void;
 }
 
-export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePanelProps) {
+export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: CreateIssuePanelProps) {
   const { selectedWorkspace, workspaces } = useWorkspace();
   const { user } = useUser();
   const { toast } = useToast();
   const [isMaximized, setIsMaximized] = useState(false);
-  
+
   // Form State
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [issueType, setIssueType] = useState("Task");
@@ -74,7 +75,8 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
   }, [initialData, isOpen, selectedWorkspace]);
 
   const handleCreate = async () => {
-    const targetWorkspace = workspaces.find(w => w._id === selectedProjectId);
+    // Fallback to selectedWorkspace if not found in list (e.g. incomplete list)
+    const targetWorkspace = workspaces.find(w => w._id === selectedProjectId) || (selectedWorkspace?._id === selectedProjectId ? selectedWorkspace : null);
 
     // Validation
     const newErrors: { summary?: boolean; project?: boolean } = {};
@@ -125,8 +127,8 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
         // Create new task
         await apiClient.post(`/workspaces/${targetWorkspace!._id}/rows`, {
           data: {
-             ...taskData,
-             createdAt: new Date().toISOString(),
+            ...taskData,
+            createdAt: new Date().toISOString(),
           }
         });
         toast({
@@ -134,7 +136,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
           description: `Task has been created successfully in ${targetWorkspace!.name}.`,
         });
       }
-      
+
       onClose();
     } catch (error) {
       console.error("Failed to save task", error);
@@ -143,6 +145,13 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
         title: "Error",
         description: "Failed to save task. Please try again.",
       });
+    }
+  };
+
+  const handleDelete = () => {
+    if (initialData && onDelete) {
+      onDelete(initialData._id);
+      onClose();
     }
   };
 
@@ -164,7 +173,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/20 backdrop-blur-sm transition-all duration-300">
-      <div 
+      <div
         className={cn(
           "bg-white h-full shadow-2xl flex flex-col transition-all duration-300",
           isMaximized ? "w-full" : "w-[600px]"
@@ -181,13 +190,13 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
             <h2 className="text-lg font-semibold text-slate-800">{initialData ? "Edit task" : "New task"}</h2>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setIsMaximized(!isMaximized)}
               className="p-2 hover:bg-slate-100 rounded-sm text-slate-500"
             >
               {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="p-2 hover:bg-slate-100 rounded-sm text-slate-500"
             >
@@ -205,8 +214,8 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
           {/* Project Field */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-600 uppercase">Project *</label>
-            <Select 
-              value={selectedProjectId} 
+            <Select
+              value={selectedProjectId}
               onValueChange={(value) => {
                 setSelectedProjectId(value);
                 if (value) setErrors(prev => ({ ...prev, project: false }));
@@ -218,7 +227,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
               )}>
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 bg-blue-500 rounded-sm flex items-center justify-center">
-                     <div className="w-2.5 h-2.5 bg-white rounded-full" />
+                    <div className="w-2.5 h-2.5 bg-white rounded-full" />
                   </div>
                   <SelectValue placeholder="Select Project" />
                 </div>
@@ -229,6 +238,12 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
                     {ws.name}
                   </SelectItem>
                 ))}
+                {/* Ensure selected workspace is in list if not already */}
+                {selectedWorkspace && !workspaces.find(w => w._id === selectedWorkspace._id) && (
+                  <SelectItem key={selectedWorkspace._id} value={selectedWorkspace._id}>
+                    {selectedWorkspace.name}
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
             {errors.project && <p className="text-xs text-red-500">Project is required</p>}
@@ -259,10 +274,10 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todo">TO DO</SelectItem>
-                  <SelectItem value="ongoing">IN PROGRESS</SelectItem>
+                  <SelectItem value="in_progress">IN PROGRESS</SelectItem>
                   <SelectItem value="in_review">IN REVIEW</SelectItem>
                   <SelectItem value="blocked">BLOCKED</SelectItem>
-                  <SelectItem value="completed">DONE</SelectItem>
+                  <SelectItem value="done">DONE</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -271,7 +286,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
           {/* Summary */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-600 uppercase">Summary *</label>
-            <Input 
+            <Input
               value={summary}
               onChange={(e) => {
                 setSummary(e.target.value);
@@ -290,18 +305,18 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-600 uppercase">Description</label>
             <div className="border border-slate-300 rounded-sm min-h-[150px] flex flex-col">
-               <div className="border-b border-slate-200 p-2 flex items-center gap-2 bg-slate-50">
-                  <button className="p-1 hover:bg-slate-200 rounded text-xs font-bold">B</button>
-                  <button className="p-1 hover:bg-slate-200 rounded text-xs italic">I</button>
-                  <div className="w-px h-4 bg-slate-300 mx-1" />
-                  <button className="p-1 hover:bg-slate-200 rounded text-xs">List</button>
-               </div>
-               <Textarea 
+              <div className="border-b border-slate-200 p-2 flex items-center gap-2 bg-slate-50">
+                <button className="p-1 hover:bg-slate-200 rounded text-xs font-bold">B</button>
+                <button className="p-1 hover:bg-slate-200 rounded text-xs italic">I</button>
+                <div className="w-px h-4 bg-slate-300 mx-1" />
+                <button className="p-1 hover:bg-slate-200 rounded text-xs">List</button>
+              </div>
+              <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="flex-1 border-0 resize-none focus-visible:ring-0 p-3" 
-                placeholder="Add a description..." 
-               />
+                className="flex-1 border-0 resize-none focus-visible:ring-0 p-3"
+                placeholder="Add a description..."
+              />
             </div>
           </div>
 
@@ -322,8 +337,8 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
             </Select>
           </div>
 
-           {/* Assignee & Reporter */}
-           <div className="grid grid-cols-2 gap-4">
+          {/* Assignee & Reporter */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-600 uppercase">Assignee</label>
               <Select value={assignee} onValueChange={setAssignee}>
@@ -336,7 +351,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
                   <SelectItem value="current_user">{(user as any)?.name || "Me"}</SelectItem>
                 </SelectContent>
               </Select>
-              <p 
+              <p
                 className="text-xs text-blue-600 hover:underline cursor-pointer"
                 onClick={() => setAssignee("current_user")}
               >
@@ -360,60 +375,69 @@ export function CreateIssuePanel({ isOpen, onClose, initialData }: CreateIssuePa
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-600 uppercase">Labels</label>
             <div className="p-2 border border-slate-200 rounded-sm hover:bg-slate-50 cursor-text min-h-[42px] flex flex-wrap gap-2">
-               {labels.map(label => (
-                 <span key={label} className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs flex items-center gap-1">
-                   {label}
-                   <X className="w-3 h-3 cursor-pointer hover:text-slate-900" onClick={() => removeLabel(label)} />
-                 </span>
-               ))}
-               <input 
-                 className="bg-transparent outline-none text-sm flex-1 min-w-[100px]"
-                 placeholder={labels.length === 0 ? "Select labels" : ""}
-                 value={labelInput}
-                 onChange={(e) => setLabelInput(e.target.value)}
-                 onKeyDown={handleLabelKeyDown}
-               />
+              {labels.map(label => (
+                <span key={label} className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs flex items-center gap-1">
+                  {label}
+                  <X className="w-3 h-3 cursor-pointer hover:text-slate-900" onClick={() => removeLabel(label)} />
+                </span>
+              ))}
+              <input
+                className="bg-transparent outline-none text-sm flex-1 min-w-[100px]"
+                placeholder={labels.length === 0 ? "Select labels" : ""}
+                value={labelInput}
+                onChange={(e) => setLabelInput(e.target.value)}
+                onKeyDown={handleLabelKeyDown}
+              />
             </div>
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-600 uppercase">Start date</label>
-                <div className="flex items-center gap-2 p-2 border border-slate-200 rounded-sm hover:bg-slate-50 cursor-pointer">
-                   <span className="text-sm text-slate-400">None</span>
-                   <Calendar className="w-4 h-4 ml-auto text-slate-400" />
-                </div>
-             </div>
-             <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-600 uppercase">Due date</label>
-                <div className="flex items-center gap-2 p-2 border border-slate-200 rounded-sm hover:bg-slate-50 cursor-pointer">
-                   <span className="text-sm text-slate-400">None</span>
-                   <Calendar className="w-4 h-4 ml-auto text-slate-400" />
-                </div>
-             </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-600 uppercase">Start date</label>
+              <div className="flex items-center gap-2 p-2 border border-slate-200 rounded-sm hover:bg-slate-50 cursor-pointer">
+                <span className="text-sm text-slate-400">None</span>
+                <Calendar className="w-4 h-4 ml-auto text-slate-400" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-600 uppercase">Due date</label>
+              <div className="flex items-center gap-2 p-2 border border-slate-200 rounded-sm hover:bg-slate-50 cursor-pointer">
+                <span className="text-sm text-slate-400">None</span>
+                <Calendar className="w-4 h-4 ml-auto text-slate-400" />
+              </div>
+            </div>
           </div>
 
           {/* Attachments */}
           <div className="space-y-1.5">
-             <label className="text-xs font-bold text-slate-600 uppercase">Attachment</label>
-             <div className="border-2 border-dashed border-slate-200 rounded-sm p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer">
-                <Paperclip className="w-6 h-6 text-slate-400 mb-2" />
-                <p className="text-sm text-slate-600 font-medium">Drop files to attach, or <span className="text-blue-600">browse</span></p>
-             </div>
+            <label className="text-xs font-bold text-slate-600 uppercase">Attachment</label>
+            <div className="border-2 border-dashed border-slate-200 rounded-sm p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer">
+              <Paperclip className="w-6 h-6 text-slate-400 mb-2" />
+              <p className="text-sm text-slate-600 font-medium">Drop files to attach, or <span className="text-blue-600">browse</span></p>
+            </div>
           </div>
 
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 flex items-center justify-end gap-3 bg-slate-50">
-           <Button variant="ghost" onClick={onClose} className="text-slate-600 hover:bg-slate-200">Cancel</Button>
-           <Button 
-            onClick={handleCreate}
-            className="bg-blue-700 hover:bg-blue-800 text-white font-medium px-6"
-           >
-             {initialData ? "Save Changes" : "Create"}
-           </Button>
+        <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
+          <div>
+            {initialData && onDelete && (
+              <Button variant="destructive" size="sm" onClick={handleDelete}>
+                Delete
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={onClose} className="text-slate-600 hover:bg-slate-200">Cancel</Button>
+            <Button
+              onClick={handleCreate}
+              className="bg-blue-700 hover:bg-blue-800 text-white font-medium px-6"
+            >
+              {initialData ? "Save Changes" : "Create"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

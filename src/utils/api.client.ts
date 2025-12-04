@@ -25,8 +25,6 @@ const getCsrfToken = () => {
 };
 
 // Fetch token on startup to make it available for subsequent requests.
-// Fetch token on startup to make it available for subsequent requests.
-// Fetch token on startup to make it available for subsequent requests.
 getCsrfToken();
 
 apiClient.interceptors.request.use(async (config) => {
@@ -67,14 +65,22 @@ apiClient.interceptors.response.use(
         }
 
         // Handle missing access token or not authenticated error
-        if (error.response?.data?.error === "Access token missing in cookies" || error.response?.data?.error === "Not authenticated") {
+        // We check for 401 status OR specific error messages
+        if (error.response?.status === 401 ||
+            error.response?.data?.error === "Access token missing in cookies" ||
+            error.response?.data?.error === "Not authenticated") {
+
             if (typeof window !== 'undefined') {
                 // Prevent redirect loop if already on auth page
                 if (window.location.pathname.startsWith('/auth')) {
                     return Promise.reject(error);
                 }
-                const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
-                window.location.href = `/auth?redirect=${redirectUrl}`;
+
+                // Only redirect if we are not already redirecting
+                if (!window.location.search.includes('redirect=')) {
+                    const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                    window.location.href = `/auth?redirect=${redirectUrl}`;
+                }
             }
         }
 

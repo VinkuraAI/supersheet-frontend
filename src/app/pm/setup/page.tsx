@@ -16,21 +16,24 @@ interface TeamMember {
 }
 
 import { useQueryClient } from "@tanstack/react-query";
+import { workspaceKeys } from "@/features/workspace/hooks/use-workspaces";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 export default function PMSetupPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { canCreateWorkspace, maxWorkspaces, refreshLocalWorkspaces } = useWorkspace();
   const queryClient = useQueryClient();
-  
+
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  
+
   // Step 1: Workspace Basics
   const [workspaceName, setWorkspaceName] = useState("");
   const [projectDetails, setProjectDetails] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Step 2: Team Setup
   const [teamName, setTeamName] = useState("");
@@ -40,12 +43,42 @@ export default function PMSetupPage() {
   ]);
 
   // Check workspace limit
-  useEffect(() => {
-    if (!canCreateWorkspace) {
-      alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces.`);
-      router.push('/workspace');
-    }
-  }, [canCreateWorkspace, maxWorkspaces, router]);
+  // useEffect(() => {
+  //   if (!canCreateWorkspace) {
+  //     alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces.`);
+  //     router.push('/workspace');
+  //   }
+  // }, [canCreateWorkspace, maxWorkspaces, router]);
+
+  if (!canCreateWorkspace) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center space-y-6 border border-slate-200"
+        >
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+            <Grid3x3 className="w-8 h-8 text-blue-600" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800">Limit Reached</h2>
+            <p className="text-slate-600">
+              You already have created {maxWorkspaces} workspaces. Please go to the dashboard page.
+            </p>
+          </div>
+
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-blue-500/30"
+          >
+            Go to Dashboard
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -61,7 +94,7 @@ export default function PMSetupPage() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       await processFile(file);
@@ -122,7 +155,7 @@ export default function PMSetupPage() {
     const newMembers = [...members];
     // @ts-ignore
     newMembers[index][field] = value;
-    
+
     if (field === 'isLeader' && value === true) {
       // Uncheck others
       newMembers.forEach((m, i) => {
@@ -134,7 +167,9 @@ export default function PMSetupPage() {
 
   const handleCreateWorkspace = async () => {
     if (!user) return;
-    
+
+    setIsCreating(true);
+
     // 1. Create Workspace
     const payload = {
       name: workspaceName,
@@ -147,13 +182,16 @@ export default function PMSetupPage() {
     };
 
     try {
+      // Start minimum 5s timer
+      const minDelayPromise = new Promise(resolve => setTimeout(resolve, 5000));
+
       const response = await apiClient.post('/workspaces', payload);
       const newWorkspace = response.data;
 
       // 2. Invite Members (if any)
       // Filter out empty members and the creator (if they added themselves)
       const membersToInvite = members.filter(m => m.email && m.email !== user.email);
-      
+
       if (membersToInvite.length > 0) {
         // We do this sequentially or in parallel. Parallel is faster.
         await Promise.all(membersToInvite.map(async (member) => {
@@ -171,13 +209,17 @@ export default function PMSetupPage() {
       }
 
       // 3. Refresh Context (React Query should handle this if we invalidate queries)
-      await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
+
+      // Wait for the remaining time of the 5s delay
+      await minDelayPromise;
+
       // 4. Redirect
-      router.push('/dashboard');
+      router.push(`/pm/workspace/${newWorkspace._id}`);
     } catch (error) {
       console.error('Error creating workspace:', error);
-      const errorMessage = (error as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Failed to create workspace. Please try again.';
+      setIsCreating(false);
+      const errorMessage = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to create workspace. Please try again.';
       alert(errorMessage);
     }
   };
@@ -200,9 +242,8 @@ export default function PMSetupPage() {
           <div className="flex items-center justify-center gap-4">
             {[1, 2, 3].map((step) => (
               <div key={step} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-colors ${
-                  currentStep >= step ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-colors ${currentStep >= step ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+                  }`}>
                   {step}
                 </div>
                 <span className={`text-sm font-medium ${currentStep >= step ? 'text-blue-600' : 'text-slate-500'}`}>
@@ -218,7 +259,7 @@ export default function PMSetupPage() {
         {currentStep === 1 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-6">Workspace Basics</h2>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Workspace Name *</label>
@@ -234,9 +275,8 @@ export default function PMSetupPage() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Project Details (PDF/Text)</label>
                 <div
-                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                    dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-slate-400'
-                  }`}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-slate-400'
+                    }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
@@ -284,7 +324,7 @@ export default function PMSetupPage() {
         {currentStep === 2 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-6">Team Setup</h2>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Team Name</label>
@@ -327,7 +367,7 @@ export default function PMSetupPage() {
                           <option value="Viewer">Viewer</option>
                         </select>
                       </div>
-                      
+
                       <div className="flex flex-col gap-2 items-center pt-1">
                         <button
                           onClick={() => updateMember(index, 'isLeader', !member.isLeader)}
@@ -374,7 +414,7 @@ export default function PMSetupPage() {
         {currentStep === 3 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-slate-800 mb-6">Confirm Details</h2>
-            
+
             <div className="space-y-6">
               <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
                 <div>
@@ -413,6 +453,7 @@ export default function PMSetupPage() {
           </motion.div>
         )}
       </div>
+      <LoadingOverlay isVisible={isCreating} message="Creating your workspace..." subMessage="Setting up your environment and caching data" />
     </div>
   );
 }

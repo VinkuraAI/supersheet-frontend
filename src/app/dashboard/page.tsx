@@ -240,6 +240,7 @@ const CreateWorkspaceCard = ({ canCreate }: { canCreate: boolean }) => {
 };
 
 function DashboardPage() {
+  const router = useRouter();
   const { workspaces, ownedWorkspaces, sharedWorkspaces, isLoading, canCreateWorkspace, workspaceCount, maxWorkspaces } = useWorkspace();
 
   useEffect(() => {
@@ -345,23 +346,23 @@ function DashboardPage() {
               <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
                 <h3 className="text-lg font-medium text-slate-900 mb-2">No workspaces found</h3>
                 <p className="text-slate-500 mb-6">Get started by creating your first workspace.</p>
-                <Button onClick={() => router.push('/welcome?create=true')}>
+                <button
+                  onClick={() => router.push('/welcome?create=true')}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-blue-500/30"
+                >
                   Create Workspace
-                </Button>
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {ownedWorkspaces.map((workspace) => (
-                  <WorkspaceCard key={workspace._id} workspace={workspace} isOwner={true} />
+                {ownedWorkspaces.map((workspace, index) => (
+                  <WorkspaceCard key={workspace._id} workspace={workspace} index={index} />
                 ))}
-                {sharedWorkspaces.map((workspace) => (
-                  <WorkspaceCard key={workspace._id} workspace={workspace} isOwner={false} />
+                {sharedWorkspaces.map((workspace, index) => (
+                  <WorkspaceCard key={workspace._id} workspace={workspace} index={ownedWorkspaces.length + index} />
                 ))}
-                
-                {/* Always show create card if limit not reached */}
-                {canCreateWorkspace && (
-                  <CreateWorkspaceCard onClick={() => router.push('/welcome?create=true')} />
-                )}
+
+                <CreateWorkspaceCard canCreate={canCreateWorkspace} />
               </div>
             )}
           </>

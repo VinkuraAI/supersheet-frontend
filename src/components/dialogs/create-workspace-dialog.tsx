@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { LoadingOverlay } from "@/components/ui/loading-overlay"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,6 +19,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/lib/auth-context"
 import { useWorkspace } from "@/lib/workspace-context"
 import apiClient from "@/utils/api.client"
+import { useQueryClient } from "@tanstack/react-query"
+import { workspaceKeys } from "@/features/workspace/hooks/use-workspaces"
 import { toast } from "sonner"
 
 interface CreateWorkspaceDialogProps {
@@ -29,7 +32,8 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
   const router = useRouter()
   const { user } = useAuth()
   const { setWorkspaces, setSelectedWorkspace } = useWorkspace()
-  
+  const queryClient = useQueryClient()
+
   const [step, setStep] = useState<'name' | 'description'>('name')
   const [workspaceName, setWorkspaceName] = useState("")
   const [jobDescription, setJobDescription] = useState("")
@@ -63,7 +67,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
       if (file.type === 'text/plain' || file.type === 'application/pdf' || file.name.endsWith('.docx')) {
@@ -119,22 +123,31 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
     }
 
     try {
+      // Start minimum 5s timer
+      const minDelayPromise = new Promise(resolve => setTimeout(resolve, 5000))
+
       const response = await apiClient.post('/workspaces', payload)
       const newWorkspace = response.data
-      
+
+      // Invalidate workspace list query
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() })
+
+      // Wait for the remaining time of the 5s delay
+      await minDelayPromise
+
       // Update workspace context
       setWorkspaces(prev => [...prev, newWorkspace])
       setSelectedWorkspace(newWorkspace)
-      
+
       toast.success(`Workspace "${workspaceName}" created successfully!`)
-      
+
       // Reset form
       setWorkspaceName("")
       setJobDescription("")
       setUploadedFile(null)
       setStep('name')
       onOpenChange(false)
-      
+
       // Navigate to the new workspace
       router.push(`/workspace/${newWorkspace._id}`)
     } catch (error: any) {
@@ -161,8 +174,8 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             {step === 'name' ? 'Create New Workspace' : 'Add Job Description'}
           </DialogTitle>
           <DialogDescription>
-            {step === 'name' 
-              ? 'Give your workspace a name to get started' 
+            {step === 'name'
+              ? 'Give your workspace a name to get started'
               : 'Provide a job description to help us understand your needs'}
           </DialogDescription>
         </DialogHeader>
@@ -197,7 +210,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
               <Label className="text-sm font-semibold">
                 Job Description <span className="text-red-500">*</span>
               </Label>
-              
+
               {/* Upload Area */}
               <div
                 onDragEnter={handleDrag}
@@ -206,8 +219,8 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
                 onDrop={handleDrop}
                 className={`
                   relative border-2 border-dashed rounded-lg p-6 transition-all
-                  ${dragActive 
-                    ? 'border-blue-500 bg-blue-50' 
+                  ${dragActive
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
                   }
                 `}
@@ -263,7 +276,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
             Cancel
           </Button>
           {step === 'name' ? (
-            <Button 
+            <Button
               onClick={handleNext}
               disabled={!workspaceName.trim() || workspaceName.length < 3}
               className="bg-blue-600 hover:bg-blue-700"
@@ -271,7 +284,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
               Next
             </Button>
           ) : (
-            <Button 
+            <Button
               onClick={handleCreate}
               disabled={!jobDescription.trim() || isCreating}
               className="bg-blue-600 hover:bg-blue-700"
@@ -291,6 +304,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
           )}
         </DialogFooter>
       </DialogContent>
+      <LoadingOverlay isVisible={isCreating} message="Creating your workspace..." subMessage="Setting up your environment and caching data" />
     </Dialog>
   )
 }

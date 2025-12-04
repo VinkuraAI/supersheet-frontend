@@ -9,9 +9,10 @@ interface PMSummaryViewProps {
   workspaceName: string;
   onCreateClick: () => void;
   tasks: any[];
+  onDeleteTask?: (taskId: string) => void;
 }
 
-export function PMSummaryView({ workspaceName, onCreateClick, tasks = [] }: PMSummaryViewProps) {
+export function PMSummaryView({ workspaceName, onCreateClick, tasks = [], onDeleteTask }: PMSummaryViewProps) {
   const { user } = useUser();
   const greeting = getGreeting();
 
@@ -28,7 +29,7 @@ export function PMSummaryView({ workspaceName, onCreateClick, tasks = [] }: PMSu
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const doneLast7Days = tasks.filter(t => 
-    (t.data?.Status === 'Done' || t.data?.Status === 'Completed') && 
+    (t.data?.status === 'done' || t.data?.Status === 'Done' || t.data?.Status === 'Completed') && 
     new Date(t.updatedAt) > sevenDaysAgo
   ).length;
 
@@ -48,14 +49,14 @@ export function PMSummaryView({ workspaceName, onCreateClick, tasks = [] }: PMSu
 
   // Status Overview
   const statusCounts = tasks.reduce((acc, t) => {
-    const status = t.data?.Status || 'Unknown';
+    const status = t.data?.status || t.data?.Status || 'Unknown';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
   // Priority Breakdown
   const priorityCounts = tasks.reduce((acc, t) => {
-    const priority = t.data?.Priority || 'Medium';
+    const priority = t.data?.priority || t.data?.Priority || 'Medium';
     acc[priority] = (acc[priority] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -65,7 +66,7 @@ export function PMSummaryView({ workspaceName, onCreateClick, tasks = [] }: PMSu
 
   // Types of Work
   const typeCounts = tasks.reduce((acc, t) => {
-    const type = t.data?.Type || 'Task';
+    const type = t.data?.issueType || t.data?.Type || 'Task';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -147,7 +148,7 @@ export function PMSummaryView({ workspaceName, onCreateClick, tasks = [] }: PMSu
                        {Object.entries(statusCounts).map(([status, count]) => (
                          <div key={status} className="flex justify-between px-2 py-1 bg-slate-50 rounded">
                            <span className="text-slate-600 truncate">{status}</span>
-                           <span className="font-semibold text-slate-800">{count}</span>
+                           <span className="font-semibold text-slate-800">{count as number}</span>
                          </div>
                        ))}
                     </div>
