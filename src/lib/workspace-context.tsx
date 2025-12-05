@@ -107,7 +107,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isPMSetupPage && !isDashboardPage && !isRootPage && !isReportsPage && !isWorkspaceReportsPage && !isAcceptInvitationPage && !isCandidateFormPage) {
         // Only redirect to welcome if user has NO workspaces (neither owned nor shared)
-        if (workspaces.length === 0) {
+        // AND we are not currently on a workspace page (let the page handle 404/access denied)
+        if (workspaces.length === 0 && !workspaceIdFromUrl) {
           // Avoid infinite redirect if already on welcome
           if (pathname !== '/welcome') {
             router.push('/welcome');

@@ -83,7 +83,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
     isLoading: isDetailsLoading,
     error: detailsError,
     refetch: refetchWorkspaceDetails
-  } = useWorkspaceDetails(selectedWorkspace?._id);
+  } = useWorkspaceDetails(workspaceId);
 
   // Sync selectedWorkspace with URL params
   useEffect(() => {

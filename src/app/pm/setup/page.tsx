@@ -30,7 +30,7 @@ const loadingStates = [
 export default function PMSetupPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { canCreateWorkspace, maxWorkspaces, refreshLocalWorkspaces } = useWorkspace();
+  const { canCreateWorkspace, maxWorkspaces, refreshLocalWorkspaces, setSelectedWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -195,6 +195,9 @@ export default function PMSetupPage() {
 
       const response = await apiClient.post('/workspaces', payload);
       const newWorkspace = response.data;
+
+      // Set the selected workspace immediately
+      setSelectedWorkspace(newWorkspace);
 
       // 2. Invite Members (if any)
       // Filter out empty members and the creator (if they added themselves)

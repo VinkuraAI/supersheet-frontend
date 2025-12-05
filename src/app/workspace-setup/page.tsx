@@ -24,7 +24,7 @@ function WorkspaceSetup() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { canCreateWorkspace, maxWorkspaces } = useWorkspace();
+  const { canCreateWorkspace, maxWorkspaces, setSelectedWorkspace } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<'workspace-name' | 'job-description'>('workspace-name');
   const [workspaceName, setWorkspaceName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -196,6 +196,9 @@ function WorkspaceSetup() {
 
       // Invalidate workspace list query to ensure the new workspace appears
       await queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
+
+      // Set the selected workspace immediately
+      setSelectedWorkspace(newWorkspace);
 
       // Wait for the remaining time of the 5s delay
       await minDelayPromise;
