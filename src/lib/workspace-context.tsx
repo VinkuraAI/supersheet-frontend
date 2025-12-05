@@ -85,7 +85,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (isWorkspaceLoading || isUserLoading) return;
 
     const pathSegments = pathname.split('/');
-    const workspaceIdFromUrl = pathSegments.length > 2 && pathSegments[1] === 'workspace' ? pathSegments[2] : null;
+    let workspaceIdFromUrl = null;
+    if (pathSegments.length > 2 && pathSegments[1] === 'workspace') {
+      workspaceIdFromUrl = pathSegments[2];
+    } else if (pathSegments.length > 3 && (pathSegments[1] === 'hr' || pathSegments[1] === 'pm') && pathSegments[2] === 'workspace') {
+      workspaceIdFromUrl = pathSegments[3];
+    }
 
     if (workspaceIdFromUrl) {
       const found = workspaces.find(w => w._id === workspaceIdFromUrl);
