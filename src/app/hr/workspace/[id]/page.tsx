@@ -157,7 +157,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
 
   return (
     <main className="min-h-dvh flex flex-col text-[0.75rem]">
-      <header className="border-b bg-card flex-shrink-0">
+      <header className="fixed top-0 left-0 right-0 z-40 h-[60px] border-b bg-card">
         <TopBar
           onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
           onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
@@ -169,23 +169,21 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
         {/* Left sidebar - fixed and toggleable */}
         <aside
           className={`
-            fixed left-0 top-[43px] bottom-0 z-30 w-[195px] 
+            fixed left-0 top-[60px] bottom-0 z-30 w-[256px] 
             bg-card border-r transition-transform duration-300
             overflow-y-auto scrollbar-hide
             ${leftSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           `}
           aria-label="Project navigation"
         >
-          <div className="p-1.5">
-            <SideNav />
-          </div>
+          <SideNav />
         </aside>
 
         {/* Center content - adjusts margin based on sidebar state */}
         <div
           className={`
-            flex-1 flex flex-col transition-all duration-300 pb-18 min-w-0
-            ${leftSidebarOpen ? "ml-[195px]" : "ml-0"}
+            flex-1 flex flex-col transition-all duration-300 pb-18 min-w-0 pt-[60px]
+            ${leftSidebarOpen ? "ml-[256px]" : "ml-0"}
             ${rightSidebarOpen ? "mr-[240px]" : "mr-0"}
           `}
         >
@@ -222,7 +220,7 @@ function PageContent({ leftSidebarOpen, rightSidebarOpen, setLeftSidebarOpen, se
         {/* Right context panel - fixed and toggleable */}
         <aside
           className={`
-            fixed right-0 top-[43px] bottom-0 z-30 w-[240px]
+            fixed right-0 top-[60px] bottom-0 z-30 w-[240px]
             bg-card border-l transition-transform duration-300
             overflow-y-auto scrollbar-hide
             ${rightSidebarOpen ? "translate-x-0" : "translate-x-full"}

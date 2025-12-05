@@ -241,6 +241,23 @@ export function SideNav() {
                         )} />
                         {item.label}
                       </Link>
+                    ) : item.label === "Assigned to me" ? (
+                      <Link
+                        href="/workspace/shared-with-me"
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-all duration-200",
+                          item.active
+                            ? "bg-blue-50 text-blue-700 font-semibold"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        )}
+                        aria-current={item.active ? "page" : undefined}
+                      >
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full transition-colors",
+                          item.active ? "bg-blue-500" : "bg-slate-300"
+                        )} />
+                        {item.label}
+                      </Link>
                     ) : (
                       <a
                         href="#"

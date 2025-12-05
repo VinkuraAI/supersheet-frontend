@@ -102,7 +102,7 @@ function PageContent({
 
   return (
     <main className="min-h-dvh flex flex-col text-[0.75rem]">
-      <header className="fixed top-0 left-0 right-0 z-40 h-[49px] border-b bg-card">
+      <header className="fixed top-0 left-0 right-0 z-40 h-[60px] border-b bg-card">
         <TopBar
           onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
           onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
@@ -110,12 +110,12 @@ function PageContent({
         />
       </header>
 
-      <section className="flex flex-1 overflow-hidden relative pt-[49px]">
+      <section className="flex flex-1 overflow-hidden relative pt-[60px]">
         {/* Left sidebar - fixed and toggleable */}
         <aside
           className={`
-            fixed left-0 top-[49px] bottom-0 z-30 w-64 
-            border-r bg-card transition-transform duration-200 ease-in-out
+            fixed left-0 top-[60px] bottom-0 z-30 w-64 
+            border-r bg-card transition-transform duration-300 ease-in-out
             ${leftSidebarOpen && !isMobile ? 'translate-x-0' : '-translate-x-full'}
           `}
         >
@@ -125,7 +125,7 @@ function PageContent({
         {/* Main content area */}
         <div
           className={`
-            flex-1 transition-all duration-200 ease-in-out overflow-hidden h-full
+            flex-1 transition-all duration-300 ease-in-out overflow-hidden h-full
             ${leftSidebarOpen && !isMobile ? 'ml-64' : 'ml-0'}
             ${rightSidebarOpen && !isMobile ? 'mr-[320px]' : 'mr-0'}
           `}
@@ -136,8 +136,8 @@ function PageContent({
         {/* Right sidebar - fixed and toggleable */}
         <aside
           className={`
-            fixed right-0 top-[49px] bottom-0 z-30 w-[320px] 
-            border-l bg-card transition-transform duration-200 ease-in-out overflow-hidden
+            fixed right-0 top-[60px] bottom-0 z-30 w-[320px] 
+            border-l bg-card transition-transform duration-300 ease-in-out overflow-hidden
             ${rightSidebarOpen && !isMobile ? 'translate-x-0' : 'translate-x-full'}
           `}
         >

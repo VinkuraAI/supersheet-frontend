@@ -17,7 +17,15 @@ interface TeamMember {
 
 import { useQueryClient } from "@tanstack/react-query";
 import { workspaceKeys } from "@/features/workspace/hooks/use-workspaces";
-import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { MultiStepLoader } from "@/components/ui/multi-step-loader";
+
+const loadingStates = [
+  { text: "Validating workspace details" },
+  { text: "Creating secure environment" },
+  { text: "Configuring database schemas" },
+  { text: "Initializing team permissions" },
+  { text: "Preparing your dashboard" },
+];
 
 export default function PMSetupPage() {
   const router = useRouter();
@@ -38,8 +46,8 @@ export default function PMSetupPage() {
   // Step 2: Team Setup
   const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState<TeamMember[]>([
-    { name: "", email: "", role: "Member", isLeader: false },
-    { name: "", email: "", role: "Member", isLeader: false }
+    { name: "", email: "", role: "Editor", isLeader: false },
+    { name: "", email: "", role: "Editor", isLeader: false }
   ]);
 
   // Check workspace limit
@@ -50,7 +58,7 @@ export default function PMSetupPage() {
   //   }
   // }, [canCreateWorkspace, maxWorkspaces, router]);
 
-  if (!canCreateWorkspace) {
+  if (!canCreateWorkspace && !isCreating) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <motion.div
@@ -140,7 +148,7 @@ export default function PMSetupPage() {
   };
 
   const handleAddMember = () => {
-    setMembers([...members, { name: "", email: "", role: "Member", isLeader: false }]);
+    setMembers([...members, { name: "", email: "", role: "Editor", isLeader: false }]);
   };
 
   const handleRemoveMember = (index: number) => {
@@ -195,6 +203,7 @@ export default function PMSetupPage() {
       if (membersToInvite.length > 0) {
         // We do this sequentially or in parallel. Parallel is faster.
         await Promise.all(membersToInvite.map(async (member) => {
+          if (!member.email) return;
           try {
             await apiClient.post(`/workspaces/${newWorkspace._id}/invite`, {
               email: member.email,
@@ -362,7 +371,7 @@ export default function PMSetupPage() {
                           onChange={(e) => updateMember(index, 'role', e.target.value)}
                           className="w-full p-2 border rounded-lg text-sm"
                         >
-                          <option value="Member">Member</option>
+                          <option value="Editor">Editor</option>
                           <option value="Admin">Admin</option>
                           <option value="Viewer">Viewer</option>
                         </select>
@@ -453,7 +462,7 @@ export default function PMSetupPage() {
           </motion.div>
         )}
       </div>
-      <LoadingOverlay isVisible={isCreating} message="Creating your workspace..." subMessage="Setting up your environment and caching data" />
+      <MultiStepLoader loadingStates={loadingStates} loading={isCreating} duration={1000} />
     </div>
   );
 }
