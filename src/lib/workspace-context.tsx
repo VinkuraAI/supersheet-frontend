@@ -1,100 +1,126 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import apiClient from '@/utils/api.client';
-
-interface Workspace {
-  _id: string;
-  name: string;
-  userId: string;
-}
+import { Role, canManageWorkspace, canDeleteWorkspace, canManageMembers, canEditContent } from '@/utils/permissions';
+import { useWorkspaces } from '@/features/workspace/hooks/use-workspaces';
+import { Workspace } from '@/features/workspace/services/workspace-service';
+import { useUser } from '@/lib/user-context';
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
-  setWorkspaces: React.Dispatch<React.SetStateAction<Workspace[]>>;
+  ownedWorkspaces: Workspace[];
+  sharedWorkspaces: Workspace[];
+  setWorkspaces: React.Dispatch<React.SetStateAction<Workspace[]>>; // Kept for compatibility, but effectively no-op
   selectedWorkspace: Workspace | null;
   setSelectedWorkspace: (workspace: Workspace | null) => void;
   isLoading: boolean;
   canCreateWorkspace: boolean;
   workspaceCount: number;
   maxWorkspaces: number;
+  currentRole: Role | null;
+  permissions: {
+    canManageWorkspace: boolean;
+    canDeleteWorkspace: boolean;
+    canManageMembers: boolean;
+    canEditContent: boolean;
+  };
+  refreshLocalWorkspaces: () => void; // Deprecated, kept for compatibility
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const { user, isLoading: isUserLoading } = useUser();
+  const { data, isLoading: isWorkspaceLoading } = useWorkspaces({ enabled: !!user });
   const [selectedWorkspace, setSelectedWorkspaceState] = useState<Workspace | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentRole, setCurrentRole] = useState<Role | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
+  const ownedWorkspaces = useMemo(() => data?.ownedWorkspaces || [], [data]);
+  const sharedWorkspaces = useMemo(() => data?.sharedWorkspaces || [], [data]);
+  const workspaces = useMemo(() => [...ownedWorkspaces, ...sharedWorkspaces], [ownedWorkspaces, sharedWorkspaces]);
+
+  // Role calculation effect
   useEffect(() => {
-    const fetchWorkspaces = async () => {
-      setIsLoading(true);
-      try {
-        // Check if user is authenticated first
-        const storedUser = localStorage.getItem("user");
-        if (!storedUser) {
-          // No user logged in, don't make API calls
-          setIsLoading(false);
-          return;
-        }
+    if (selectedWorkspace) {
+      const storedUserStr = localStorage.getItem("user");
+      if (storedUserStr) {
+        try {
+          const user = JSON.parse(storedUserStr);
+          // Find member
+          const member = selectedWorkspace.members?.find(m => {
+            const memberId = typeof m.user === 'string' ? m.user : m.user._id;
+            return memberId === user.id;
+          });
 
-        const response = await apiClient.get<Workspace[]>("/workspaces");
-        const fetchedWorkspaces = response.data;
-        setWorkspaces(fetchedWorkspaces);
+          // If not found in members, check if owner (userId field)
+          let role: Role | null = member?.role || null;
 
-        const pathSegments = pathname.split('/');
-        const workspaceIdFromUrl = pathSegments.length > 2 && pathSegments[1] === 'workspace' ? pathSegments[2] : null;
-
-        if (workspaceIdFromUrl) {
-          const found = fetchedWorkspaces.find(w => w._id === workspaceIdFromUrl);
-          setSelectedWorkspaceState(found || null);
-        } else {
-          const isAuthPage = pathname.startsWith('/auth');
-          const isWelcomePage = pathname === '/welcome';
-          const isWorkspaceSetupPage = pathname === '/workspace-setup';
-          const isDashboardPage = pathname === '/dashboard';
-          const isRootPage = pathname === '/';
-          const isReportsPage = pathname === '/reports';
-          const isWorkspaceReportsPage = pathname === '/workspace/reports';
-
-          if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isDashboardPage && !isRootPage && !isReportsPage && !isWorkspaceReportsPage) {
-            if (fetchedWorkspaces.length > 0) {
-              router.push('/dashboard');
-            } else {
-              router.push('/welcome');
-            }
+          if (!role && selectedWorkspace.userId === user.id) {
+            role = 'owner';
           }
+
+          setCurrentRole(role);
+        } catch (e) {
+          console.error("Error parsing user for role calculation", e);
+          setCurrentRole(null);
         }
-      } catch (error: unknown) {
-        // Handle 401 Unauthorized - user needs to log in
-        const isAuthError = error && typeof error === 'object' && 'response' in error && 
-          error.response && typeof error.response === 'object' && 'status' in error.response && 
-          error.response.status === 401;
-        
-        if (isAuthError) {
-          // User is not authenticated, silently handle it
-          localStorage.removeItem("user");
-          setWorkspaces([]);
-          setSelectedWorkspaceState(null);
-          // Only log in development mode
-          if (process.env.NODE_ENV === 'development') {
-            console.log("User not authenticated, clearing workspace data");
-          }
-        } else {
-          // Log other errors
-          console.error("Failed to fetch workspaces:", error);
-        }
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } else {
+      setCurrentRole(null);
+    }
+  }, [selectedWorkspace]);
 
-    fetchWorkspaces();
-  }, [pathname, router]);
+  const permissions = {
+    canManageWorkspace: canManageWorkspace(currentRole || undefined),
+    canDeleteWorkspace: canDeleteWorkspace(currentRole || undefined),
+    canManageMembers: canManageMembers(currentRole || undefined),
+    canEditContent: canEditContent(currentRole || undefined),
+  };
+
+  // URL Sync and Redirect Effect
+  useEffect(() => {
+    if (isWorkspaceLoading || isUserLoading) return;
+
+    const pathSegments = pathname.split('/');
+    const workspaceIdFromUrl = pathSegments.length > 2 && pathSegments[1] === 'workspace' ? pathSegments[2] : null;
+
+    if (workspaceIdFromUrl) {
+      const found = workspaces.find(w => w._id === workspaceIdFromUrl);
+      if (found && found._id !== selectedWorkspace?._id) {
+        setSelectedWorkspaceState(found);
+      }
+    } else {
+      const isAuthPage = pathname.startsWith('/auth');
+      const isWelcomePage = pathname === '/welcome';
+      const isWorkspaceSetupPage = pathname === '/workspace-setup';
+      const isDashboardPage = pathname === '/dashboard';
+      const isRootPage = pathname === '/';
+      const isReportsPage = pathname === '/reports';
+      const isWorkspaceReportsPage = pathname === '/workspace/reports';
+      const isAcceptInvitationPage = pathname.startsWith('/accept-invitation');
+      const isCandidateFormPage = pathname.startsWith('/candidateForm');
+
+      const isPMSetupPage = pathname === '/pm/setup';
+
+      if (!isAuthPage && !isWelcomePage && !isWorkspaceSetupPage && !isPMSetupPage && !isDashboardPage && !isRootPage && !isReportsPage && !isWorkspaceReportsPage && !isAcceptInvitationPage && !isCandidateFormPage) {
+        // Only redirect to welcome if user has NO workspaces (neither owned nor shared)
+        if (workspaces.length === 0) {
+          // Avoid infinite redirect if already on welcome
+          if (pathname !== '/welcome') {
+            router.push('/welcome');
+          }
+        } else if (workspaces.length > 0) {
+          // If on root, go to dashboard
+          if (pathname === '/') {
+            router.push('/dashboard');
+          }
+        }
+      }
+    }
+  }, [pathname, workspaces, isWorkspaceLoading, isUserLoading, router, selectedWorkspace]);
 
   const setSelectedWorkspace = (workspace: Workspace | null) => {
     setSelectedWorkspaceState(workspace);
@@ -106,19 +132,32 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const maxWorkspaces = 2;
-  const workspaceCount = workspaces.length;
+  const workspaceCount = ownedWorkspaces.length;
   const canCreateWorkspace = workspaceCount < maxWorkspaces;
 
+  // No-op setter for compatibility
+  const setWorkspaces: React.Dispatch<React.SetStateAction<Workspace[]>> = () => {
+    console.warn("setWorkspaces is deprecated in favor of React Query");
+  };
+
   return (
-    <WorkspaceContext.Provider value={{ 
-      workspaces, 
-      setWorkspaces, 
-      selectedWorkspace, 
-      setSelectedWorkspace, 
-      isLoading,
+    <WorkspaceContext.Provider value={{
+      workspaces,
+      ownedWorkspaces,
+      sharedWorkspaces,
+      setWorkspaces,
+      selectedWorkspace,
+      setSelectedWorkspace,
+      isLoading: isWorkspaceLoading || isUserLoading,
       canCreateWorkspace,
       workspaceCount,
-      maxWorkspaces
+      maxWorkspaces,
+      currentRole,
+      permissions,
+      refreshLocalWorkspaces: () => {
+        // No-op as we don't use local workspaces anymore
+        console.warn("refreshLocalWorkspaces is deprecated");
+      }
     }}>
       {children}
     </WorkspaceContext.Provider>

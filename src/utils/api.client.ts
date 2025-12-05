@@ -45,18 +45,18 @@ apiClient.interceptors.response.use(
     response => response,
     async error => {
         const originalRequest = error.config;
-        
+
         // Handle CSRF token errors
         if (error.response?.status === 403 && !originalRequest._retry) {
             const methodsToProtect = ['post', 'put', 'delete', 'patch'];
             if (originalRequest.method && methodsToProtect.includes(originalRequest.method)) {
                 originalRequest._retry = true;
                 console.log("CSRF token validation failed; attempting to refresh and retry.");
-                
+
                 // Force a refetch of the CSRF token
                 csrfTokenPromise = null;
                 const newToken = await getCsrfToken();
-                
+
                 if (newToken) {
                     originalRequest.headers['x-csrf-token'] = newToken;
                     return apiClient(originalRequest);
@@ -64,10 +64,23 @@ apiClient.interceptors.response.use(
             }
         }
 
-        // Handle missing access token
-        if (error.response?.data?.error === "Access token missing in cookies") {
+        // Handle missing access token or not authenticated error
+        // We check for 401 status OR specific error messages
+        if (error.response?.status === 401 ||
+            error.response?.data?.error === "Access token missing in cookies" ||
+            error.response?.data?.error === "Not authenticated") {
+
             if (typeof window !== 'undefined') {
-                window.location.href = '/auth';
+                // Prevent redirect loop if already on auth page
+                if (window.location.pathname.startsWith('/auth')) {
+                    return Promise.reject(error);
+                }
+
+                // Only redirect if we are not already redirecting
+                if (!window.location.search.includes('redirect=')) {
+                    const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                    window.location.href = `/auth?redirect=${redirectUrl}`;
+                }
             }
         }
 

@@ -36,26 +36,30 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const response = await apiClient.get('/users/me');
       setUser(response.data);
     } catch (error: any) {
-      console.error('Failed to fetch user data', error);
+      // Suppress console error for expected auth failures
+      // console.error('Failed to fetch user data', error);
       
-      // Handle 401 Unauthorized - clear stored user data
-      if (error.response?.status === 401) {
+      // Handle 401/403/404 - clear stored user data and redirect
+      if (error.response?.status === 401 || error.response?.status === 403 || error.response?.status === 404) {
         localStorage.removeItem("user");
         setUser(null);
+        // Redirect to auth if not already there
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+           window.location.href = '/auth';
+        }
       } else {
-        // For other errors, try to use stored user data as fallback
+        // For other errors (500, network), try to use stored user data as fallback
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
-            // Map auth context user to user context format
             setUser({
               fullName: parsedUser.name || parsedUser.fullName || 'User',
               email: parsedUser.email || '',
               avatar: null
             });
           } catch (parseError) {
-            console.error('Failed to parse stored user data', parseError);
+            // console.error('Failed to parse stored user data', parseError);
             setUser(null);
           }
         } else {

@@ -5,13 +5,13 @@ import apiClient from "@/utils/api.client";
 import { useParams, useRouter } from "next/navigation";
 import { Document } from "@/types/document";
 import { Toaster, toast } from "sonner";
-import { 
-  FileText, 
-  UploadCloud, 
-  Trash2, 
-  Download, 
-  Loader2, 
-  X, 
+import {
+  FileText,
+  UploadCloud,
+  Trash2,
+  Download,
+  Loader2,
+  X,
   FilePlus,
   FolderOpen,
   Calendar,
@@ -56,7 +56,8 @@ const DocumentsPage = () => {
   const params = useParams();
   const router = useRouter();
   const workspaceId = params.id as string;
-  const { selectedWorkspace, workspaces, setSelectedWorkspace, isLoading: isWorkspaceLoading } = useWorkspace();
+  const { selectedWorkspace, workspaces, setSelectedWorkspace, isLoading: isWorkspaceLoading, currentRole } = useWorkspace();
+  const isViewer = currentRole === 'viewer';
 
   // Set the selected workspace based on URL parameter
   useEffect(() => {
@@ -99,7 +100,7 @@ const DocumentsPage = () => {
     // Validate file type
     const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.csv', '.png', '.jpg', '.jpeg', '.gif'];
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    
+
     if (!allowedExtensions.includes(fileExtension)) {
       toast.error("Invalid file type. Please upload PDF, DOC, DOCX, TXT, XLS, XLSX, CSV, or image files.");
       return false;
@@ -209,7 +210,7 @@ const DocumentsPage = () => {
 
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
-    
+
     // Return appropriate icon based on file type
     switch (extension) {
       case 'pdf':
@@ -233,7 +234,7 @@ const DocumentsPage = () => {
 
   const getFileGradient = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
-    
+
     // Return different gradients for different file types
     switch (extension) {
       case 'pdf':
@@ -267,7 +268,7 @@ const DocumentsPage = () => {
     <WorkspaceLayout>
       <div className="flex flex-col h-full">
         <Toaster richColors position="top-center" />
-        
+
         {/* Simple header with document count */}
         <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
           <div className="mx-auto flex w-full items-center justify-between gap-2 p-3">
@@ -281,12 +282,12 @@ const DocumentsPage = () => {
           </div>
         </header>
         {/* Content */}
-        <section 
+        <section
           className="flex-1 p-3 overflow-auto relative"
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
+          onDragEnter={!isViewer ? handleDragEnter : undefined}
+          onDragLeave={!isViewer ? handleDragLeave : undefined}
+          onDragOver={!isViewer ? handleDragOver : undefined}
+          onDrop={!isViewer ? handleDrop : undefined}
         >
           {/* Drag Overlay */}
           <AnimatePresence>
@@ -340,31 +341,33 @@ const DocumentsPage = () => {
             ) : (
               <>
                 {/* Upload Section - Always show at top */}
-                <div className="mb-6">
-                  <AnimatePresence mode="wait">
-                    {fileToUpload ? (
-                      /* File upload preview content would go here */
-                      <div>File upload preview...</div>
-                    ) : (
-                      /* Upload area would go here */
-                      <div>
-                        <Button
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="w-full h-24 border-dashed border-2 hover:border-blue-400 hover:bg-blue-50 transition-colors"
-                        >
-                          <div className="flex flex-col items-center gap-2">
-                            <UploadCloud className="w-6 h-6 text-muted-foreground" />
-                            <span className="text-sm font-medium">Upload Document</span>
-                            <span className="text-xs text-muted-foreground">
-                              PDF, DOC, DOCX, TXT, XLS, XLSX, CSV, or images
-                            </span>
-                          </div>
-                        </Button>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                {!isViewer && (
+                  <div className="mb-6">
+                    <AnimatePresence mode="wait">
+                      {fileToUpload ? (
+                        /* File upload preview content would go here */
+                        <div>File upload preview...</div>
+                      ) : (
+                        /* Upload area would go here */
+                        <div>
+                          <Button
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full h-24 border-dashed border-2 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                          >
+                            <div className="flex flex-col items-center gap-2">
+                              <UploadCloud className="w-6 h-6 text-muted-foreground" />
+                              <span className="text-sm font-medium">Upload Document</span>
+                              <span className="text-xs text-muted-foreground">
+                                PDF, DOC, DOCX, TXT, XLS, XLSX, CSV, or images
+                              </span>
+                            </div>
+                          </Button>
+                        </div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
 
                 {/* Documents Grid */}
                 {documents.length === 0 ? (
@@ -416,14 +419,16 @@ const DocumentsPage = () => {
                                 Download
                               </a>
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-700"
-                              onClick={() => handleDeleteClick(doc)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            {!isViewer && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-700"
+                                onClick={() => handleDeleteClick(doc)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </motion.div>
                       ))}

@@ -7,11 +7,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import apiClient from "@/utils/api.client";
 import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { workspaceKeys } from "@/features/workspace/hooks/use-workspaces";
+import { MultiStepLoader } from "@/components/ui/multi-step-loader";
+
+const loadingStates = [
+  { text: "Validating workspace details" },
+  { text: "Creating secure environment" },
+  { text: "Configuring database schemas" },
+  { text: "Initializing team permissions" },
+  { text: "Preparing your dashboard" },
+];
 
 function WorkspaceSetup() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { canCreateWorkspace, maxWorkspaces } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<'workspace-name' | 'job-description'>('workspace-name');
   const [workspaceName, setWorkspaceName] = useState('');
@@ -20,14 +32,46 @@ function WorkspaceSetup() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<'paste' | 'upload'>('paste');
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Check workspace limit on mount
-  useEffect(() => {
-    if (!canCreateWorkspace) {
-      alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces. Please delete an existing workspace to create a new one.`);
-      router.push('/workspace');
-    }
-  }, [canCreateWorkspace, maxWorkspaces, router]);
+  // useEffect(() => {
+  //   if (!canCreateWorkspace) {
+  //     alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces. Please delete an existing workspace to create a new one.`);
+  //     router.push('/workspace');
+  //   }
+  // }, [canCreateWorkspace, maxWorkspaces, router]);
+
+  // Check workspace limit on mount, but allow if currently creating (to prevent flash before redirect)
+  if (!canCreateWorkspace && !isCreating) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center space-y-6 border border-slate-200"
+        >
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+            <Grid3x3 className="w-8 h-8 text-blue-600" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800">Limit Reached</h2>
+            <p className="text-slate-600">
+              You already have created {maxWorkspaces} workspaces. Please go to the dashboard page.
+            </p>
+          </div>
+
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-blue-500/30"
+          >
+            Go to Dashboard
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   const handleWorkspaceSubmit = () => {
     if (workspaceName.trim() && workspaceName.length >= 3) {
@@ -49,7 +93,7 @@ function WorkspaceSetup() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type === 'text/plain' || file.type === 'application/pdf' || file.name.endsWith('.docx')) {
@@ -76,7 +120,7 @@ function WorkspaceSetup() {
       const file = e.target.files[0];
       setUploadedFile(file);
       setActiveTab('upload');
-      
+
       // Read file content if it's a text file
       if (file.type === 'text/plain') {
         const reader = new FileReader();
@@ -84,7 +128,7 @@ function WorkspaceSetup() {
           setJobDescription(e.target?.result as string);
         };
         reader.readAsText(file);
-      } 
+      }
       // Extract text from PDF
       else if (file.type === 'application/pdf') {
         await extractTextFromPDF(file);
@@ -114,7 +158,7 @@ function WorkspaceSetup() {
       }
     } catch (error) {
       console.error('Error extracting text from PDF:', error);
-      const errorMessage = (error as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Failed to extract text from PDF. Please try again or paste the text manually.';
+      const errorMessage = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to extract text from PDF. Please try again or paste the text manually.';
       alert(errorMessage);
       setUploadedFile(null);
     } finally {
@@ -128,34 +172,42 @@ function WorkspaceSetup() {
       return;
     }
 
-    // Double-check workspace limit before submission
-    if (!canCreateWorkspace) {
-      alert(`Workspace limit reached! You can only create up to ${maxWorkspaces} workspaces.`);
-      router.push('/workspace');
-      return;
-    }
-
     const workType = searchParams.get('workType');
     const hrOption = searchParams.get('hrOption');
 
     const payload = {
       name: workspaceName,
       userId: user.id,
-      mainFocus: workType,
+      mainFocus: workType || 'human-resources',
       primaryHRNeed: hrOption,
       jd: jobDescription,
       requirements: [],
       table: {},
     };
 
+    setIsCreating(true);
+
     try {
+      // Start minimum 5s timer
+      const minDelayPromise = new Promise(resolve => setTimeout(resolve, 5000));
+
       const response = await apiClient.post('/workspaces', payload);
       const newWorkspace = response.data;
-      router.push(`/workspace/${newWorkspace._id}`);
+
+      // Invalidate workspace list query to ensure the new workspace appears
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
+
+      // Wait for the remaining time of the 5s delay
+      await minDelayPromise;
+
+      // Redirect to the appropriate workspace based on workType
+      const routePrefix = (workType === 'product-management' || workType === 'project-management') ? 'pm' : 'hr';
+      router.push(`/${routePrefix}/workspace/${newWorkspace._id}`);
     } catch (error) {
       console.error('Error creating workspace:', error);
+      setIsCreating(false);
       // Show user-friendly error message
-      const errorMessage = (error as {response?: {data?: {error?: string}}})?.response?.data?.error || 'Failed to create workspace. Please try again.';
+      const errorMessage = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to create workspace. Please try again.';
       alert(errorMessage);
     }
   };
@@ -164,7 +216,7 @@ function WorkspaceSetup() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Background Pattern Overlay */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM0QjVTNjMiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE2YzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00em0wIDI0YzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00ek0xMiAxNmMwLTIuMjEgMS43OS00IDQtNHM0IDEuNzkgNCA0LTEuNzkgNC00IDQtNC0xLjc5LTQtNHptMCAyNGMwLTIuMjEgMS43OS00IDQtNHM0IDEuNzkgNCA0LTEuNzkgNC00IDQtNC0xLjc5LTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-40"></div>
-      
+
       <div className="relative max-w-3xl mx-auto px-4 py-12 sm:py-16">
         {/* Header with Enhanced Branding */}
         <div className="text-center mb-10">
@@ -185,9 +237,9 @@ function WorkspaceSetup() {
               Supersheet <span className="text-blue-600">Hiring</span>
             </span>
           </motion.div>
-          
+
           {/* Progress Indicator */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, delay: 0.1 }}
@@ -196,10 +248,10 @@ function WorkspaceSetup() {
             {/* Step 1 Indicator */}
             <div className="flex flex-col items-center gap-2">
               {/* Active Step Circle: Gradient #3B82F6 to #2563EB, Shadow with 25% opacity */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${currentStep === 'workspace-name' 
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25 ring-4 ring-blue-100' 
-                  : 'bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/25'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${currentStep === 'workspace-name'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25 ring-4 ring-blue-100'
+                : 'bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/25'
+                }`}>
                 {/* Step Number/Checkmark: White #FFFFFF */}
                 <span className="text-white text-sm font-semibold">
                   {currentStep === 'workspace-name' ? '1' : '✓'}
@@ -210,20 +262,20 @@ function WorkspaceSetup() {
                 Workspace
               </span>
             </div>
-            
+
             {/* Progress Connector Bar */}
             {/* Active: Gradient #3B82F6 to #2563EB, Inactive: #E2E8F0 */}
-            <div className={`h-1 w-16 sm:w-24 rounded-full transition-all duration-500 ${currentStep === 'job-description' 
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600' 
-                : 'bg-slate-200'
-            }`} />
-            
+            <div className={`h-1 w-16 sm:w-24 rounded-full transition-all duration-500 ${currentStep === 'job-description'
+              ? 'bg-gradient-to-r from-blue-500 to-blue-600'
+              : 'bg-slate-200'
+              }`} />
+
             {/* Step 2 Indicator */}
             <div className="flex flex-col items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${currentStep === 'job-description' 
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25 ring-4 ring-blue-100' 
-                  : 'bg-slate-200'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${currentStep === 'job-description'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25 ring-4 ring-blue-100'
+                : 'bg-slate-200'
+                }`}>
                 <span className={`text-sm font-semibold ${currentStep === 'job-description' ? 'text-white' : 'text-slate-400'}`}>
                   2
                 </span>
@@ -265,14 +317,14 @@ function WorkspaceSetup() {
                   <label htmlFor="workspace-name" className="block text-sm font-semibold text-slate-700 mb-3">
                     Workspace Name *
                   </label>
-                  
+
                   {/* Input Container with Icon */}
                   <div className="relative">
                     {/* Icon Container: Absolute positioned, Light gray #94A3B8 */}
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                       <FileText className="w-5 h-5 text-slate-400" />
                     </div>
-                    
+
                     {/* Input Field */}
                     {/* Default: White #FFFFFF background, Border #CBD5E1, Text #1E293B */}
                     {/* Focus: Border #3B82F6, Ring #3B82F6 with 20% opacity, 4px ring */}
@@ -291,7 +343,7 @@ function WorkspaceSetup() {
                       autoFocus
                     />
                   </div>
-                  
+
                   {/* Helper Text: Light gray #64748B */}
                   <p className="mt-2 text-sm text-slate-500">
                     Choose a descriptive name that reflects your team&apos;s purpose
@@ -331,7 +383,7 @@ function WorkspaceSetup() {
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     Back
                   </button>
-                  
+
                   {/* Continue Button */}
                   {/* Enabled: Gradient #3B82F6 to #2563EB, Text white, Shadow blue with 30% opacity */}
                   {/* Hover: Gradient #2563EB to #1D4ED8, Shadow increases, Scale 1.02 */}
@@ -353,7 +405,7 @@ function WorkspaceSetup() {
                 </div>
               </div>
             </div>
-            
+
             {/* Tips Section */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -420,9 +472,9 @@ function WorkspaceSetup() {
                     setUploadedFile(null);
                   }}
                   className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${activeTab === 'paste'
-                      ? 'border-blue-500 text-blue-600 bg-white shadow-sm' 
-                      : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-                  }`}
+                    ? 'border-blue-500 text-blue-600 bg-white shadow-sm'
+                    : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
+                    }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     {/* Tab Icon: Inherits text color */}
@@ -436,7 +488,7 @@ function WorkspaceSetup() {
                     )}
                   </div>
                 </button>
-                
+
                 {/* Upload File Tab */}
                 <button
                   onClick={() => {
@@ -444,9 +496,9 @@ function WorkspaceSetup() {
                     setJobDescription('');
                   }}
                   className={`flex-1 py-4 px-6 text-sm font-semibold border-b-3 transition-all duration-200 ${activeTab === 'upload'
-                      ? 'border-blue-500 text-blue-600 bg-white shadow-sm' 
-                      : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-                  }`}
+                    ? 'border-blue-500 text-blue-600 bg-white shadow-sm'
+                    : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-100'
+                    }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Upload className="w-5 h-5" />
@@ -481,7 +533,7 @@ function WorkspaceSetup() {
                         </span>
                       )}
                     </div>
-                    
+
                     {/* Textarea */}
                     {/* Default: Background white, Border #CBD5E1, Text #1E293B */}
                     {/* Focus: Border #3B82F6, Ring #3B82F6 with 20% opacity */}
@@ -499,7 +551,7 @@ function WorkspaceSetup() {
                                placeholder:text-slate-400 bg-white resize-none
                                font-mono"
                     />
-                    
+
                     {/* Format Tips */}
                     <div className="flex flex-wrap gap-2">
                       <span className="text-xs text-slate-500">Tip:</span>
@@ -529,10 +581,10 @@ function WorkspaceSetup() {
                     {/* Drag Active: Border #3B82F6 (3px), Background #EFF6FF */}
                     {/* Hover: Border #94A3B8, Background #F8FAFC */}
                     <div
-                      className={`relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-300 ${dragActive 
-                          ? 'border-blue-500 bg-blue-50 border-3' 
-                          : 'border-slate-300 hover:border-slate-400 bg-slate-50 hover:bg-slate-100'
-                      }`}
+                      className={`relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-300 ${dragActive
+                        ? 'border-blue-500 bg-blue-50 border-3'
+                        : 'border-slate-300 hover:border-slate-400 bg-slate-50 hover:bg-slate-100'
+                        }`}
                       onDragEnter={handleDrag}
                       onDragLeave={handleDrag}
                       onDragOver={handleDrag}
@@ -551,7 +603,7 @@ function WorkspaceSetup() {
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           </div>
-                          
+
                           {/* Loading Message */}
                           <p className="text-blue-600 font-semibold text-lg">Extracting text from PDF...</p>
                           <p className="text-slate-600 text-sm">This may take a few moments</p>
@@ -568,7 +620,7 @@ function WorkspaceSetup() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
-                          
+
                           {/* Success Message: Green #059669 */}
                           <p className="text-green-600 font-semibold text-lg">
                             {uploadedFile?.type === 'application/pdf' ? 'Text extracted successfully!' : 'File uploaded successfully!'}
@@ -576,7 +628,7 @@ function WorkspaceSetup() {
                           {uploadedFile?.type === 'application/pdf' && (
                             <p className="text-slate-600 text-sm">Job description has been extracted from the PDF</p>
                           )}
-                          
+
                           {/* File Info Card: Background #F0FDF4, Border #BBF7D0 */}
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-md mx-auto">
                             <div className="flex items-center gap-3">
@@ -601,7 +653,7 @@ function WorkspaceSetup() {
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Remove Button */}
                           {/* Default: Text #DC2626, Background transparent */}
                           {/* Hover: Background #FEE2E2, Text #B91C1C */}
@@ -621,23 +673,23 @@ function WorkspaceSetup() {
                           {/* Upload Icon Container */}
                           {/* Default: Background #F1F5F9, Icon #64748B */}
                           {/* Drag Active: Background #DBEAFE, Icon #3B82F6 */}
-                          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center transition-all duration-300 ${dragActive 
-                              ? 'bg-blue-100 scale-110' 
-                              : 'bg-slate-200'
-                          }`}>
+                          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center transition-all duration-300 ${dragActive
+                            ? 'bg-blue-100 scale-110'
+                            : 'bg-slate-200'
+                            }`}>
                             <Upload className={`w-8 h-8 transition-colors duration-300 ${dragActive ? 'text-blue-600' : 'text-slate-500'}`} />
                           </div>
-                          
+
                           {/* Upload Instructions */}
                           <div className="space-y-2">
                             {/* Primary Text: Slate #334155 */}
                             <p className="text-slate-700 font-medium">
                               <strong className="text-slate-800">Drag and drop</strong> your job description file here
                             </p>
-                            
+
                             {/* Divider Text: Slate #64748B */}
                             <p className="text-slate-600 text-sm">or</p>
-                            
+
                             {/* Browse Button */}
                             {/* Default: Text #3B82F6, Underline */}
                             {/* Hover: Text #2563EB, Background #EFF6FF */}
@@ -652,7 +704,7 @@ function WorkspaceSetup() {
                               />
                             </label>
                           </div>
-                          
+
                           {/* Supported Formats: Light gray #94A3B8 */}
                           <div className="pt-4 border-t border-slate-200">
                             <p className="text-xs text-slate-500 font-medium">
@@ -688,7 +740,7 @@ function WorkspaceSetup() {
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     Back
                   </button>
-                  
+
                   {/* Create Workspace Button */}
                   <button
                     onClick={handleFinalSubmit}
@@ -710,14 +762,16 @@ function WorkspaceSetup() {
           </motion.div>
         )}
       </div>
-    </div>
+
+      <MultiStepLoader loadingStates={loadingStates} loading={isCreating} duration={1000} />
+    </div >
   );
 }
 
 export default function WorkspaceSetupPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <WorkspaceSetup />
-        </Suspense>
-    )
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <WorkspaceSetup />
+    </Suspense>
+  )
 }

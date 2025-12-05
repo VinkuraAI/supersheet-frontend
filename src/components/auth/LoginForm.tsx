@@ -6,8 +6,13 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { workspaceKeys } from "@/features/workspace/hooks/use-workspaces";
+import { workspaceService } from "@/features/workspace/services/workspace-service";
+
 export default function LoginForm() {
   const { login, isLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -49,16 +54,25 @@ export default function LoginForm() {
     try {
       await login(formData.email, formData.password);
       
-      // Check if user has workspaces before redirecting
-      const { default: apiClient } = await import('@/utils/api.client');
-      const response = await apiClient.get('/workspaces');
-      const workspaces = response.data;
-      
-      // Redirect based on workspace count
-      if (workspaces && workspaces.length > 0) {
+      // Fetch workspaces to determine where to redirect
+      // This also pre-caches the data for the next page
+      try {
+        const data = await queryClient.fetchQuery({
+          queryKey: workspaceKeys.lists(),
+          queryFn: workspaceService.getWorkspaces,
+        });
+
+        const hasWorkspaces = (data.ownedWorkspaces?.length || 0) > 0 || (data.sharedWorkspaces?.length || 0) > 0;
+        
+        if (hasWorkspaces) {
+          router.push('/dashboard');
+        } else {
+          router.push('/welcome');
+        }
+      } catch (workspaceError) {
+        console.error("Failed to fetch workspaces during login:", workspaceError);
+        // Fallback to dashboard if workspace fetch fails
         router.push('/dashboard');
-      } else {
-        router.push('/welcome');
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";

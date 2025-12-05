@@ -24,7 +24,7 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth
-      
+
       if (width < 1272) {
         setLeftSidebarOpen(false)
         setRightSidebarOpen(false)
@@ -45,11 +45,11 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   }, [])
 
   return (
-    <PageContent 
-      leftSidebarOpen={leftSidebarOpen} 
-      rightSidebarOpen={rightSidebarOpen} 
-      setLeftSidebarOpen={setLeftSidebarOpen} 
-      setRightSidebarOpen={setRightSidebarOpen} 
+    <PageContent
+      leftSidebarOpen={leftSidebarOpen}
+      rightSidebarOpen={rightSidebarOpen}
+      setLeftSidebarOpen={setLeftSidebarOpen}
+      setRightSidebarOpen={setRightSidebarOpen}
       isMobile={isMobile}
     >
       {children}
@@ -66,13 +66,13 @@ interface PageContentProps {
   children: ReactNode
 }
 
-function PageContent({ 
-  leftSidebarOpen, 
-  rightSidebarOpen, 
-  setLeftSidebarOpen, 
-  setRightSidebarOpen, 
+function PageContent({
+  leftSidebarOpen,
+  rightSidebarOpen,
+  setLeftSidebarOpen,
+  setRightSidebarOpen,
   isMobile,
-  children 
+  children
 }: PageContentProps) {
   const { selectedWorkspace, isLoading } = useWorkspace()
   const params = useParams()
@@ -102,7 +102,7 @@ function PageContent({
 
   return (
     <main className="min-h-dvh flex flex-col text-[0.75rem]">
-      <header className="border-b bg-card flex-shrink-0">
+      <header className="fixed top-0 left-0 right-0 z-40 h-[60px] border-b bg-card">
         <TopBar
           onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
           onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
@@ -110,12 +110,12 @@ function PageContent({
         />
       </header>
 
-      <section className="flex flex-1 overflow-hidden relative">
+      <section className="flex flex-1 overflow-hidden relative pt-[60px]">
         {/* Left sidebar - fixed and toggleable */}
         <aside
           className={`
-            fixed left-0 top-[45px] bottom-0 z-30 w-[195px] 
-            border-r bg-card transition-transform duration-200 ease-in-out
+            fixed left-0 top-[60px] bottom-0 z-30 w-64 
+            border-r bg-card transition-transform duration-300 ease-in-out
             ${leftSidebarOpen && !isMobile ? 'translate-x-0' : '-translate-x-full'}
           `}
         >
@@ -123,10 +123,10 @@ function PageContent({
         </aside>
 
         {/* Main content area */}
-        <div 
+        <div
           className={`
-            flex-1 transition-all duration-200 ease-in-out overflow-hidden
-            ${leftSidebarOpen && !isMobile ? 'ml-[195px]' : 'ml-0'}
+            flex-1 transition-all duration-300 ease-in-out overflow-hidden h-full
+            ${leftSidebarOpen && !isMobile ? 'ml-64' : 'ml-0'}
             ${rightSidebarOpen && !isMobile ? 'mr-[320px]' : 'mr-0'}
           `}
         >
@@ -136,8 +136,8 @@ function PageContent({
         {/* Right sidebar - fixed and toggleable */}
         <aside
           className={`
-            fixed right-0 top-[45px] bottom-0 z-30 w-[320px] 
-            border-l bg-card transition-transform duration-200 ease-in-out overflow-hidden
+            fixed right-0 top-[60px] bottom-0 z-30 w-[320px] 
+            border-l bg-card transition-transform duration-300 ease-in-out overflow-hidden
             ${rightSidebarOpen && !isMobile ? 'translate-x-0' : 'translate-x-full'}
           `}
         >
@@ -145,8 +145,8 @@ function PageContent({
         </aside>
       </section>
 
-      {/* AI Chat Widget */}
-      <AiChatWidget />
+      {/* AI Chat Widget - Hide on settings page */}
+      {!params.id?.includes('settings') && typeof window !== 'undefined' && !window.location.pathname.includes('/settings') && <AiChatWidget />}
     </main>
   )
 }
