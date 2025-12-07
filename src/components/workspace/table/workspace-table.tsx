@@ -34,6 +34,7 @@ import {
     TruncatedCell,
 } from "./table-cells";
 import { MailConsent } from "./mail-consent";
+import { CellEditDialog } from "@/components/dialogs/cell-edit-dialog";
 
 import { useAuth } from "@/lib/auth-context";
 
@@ -89,6 +90,7 @@ export function WorkspaceTable({
         col: string;
     } | null>(null);
     const [editValue, setEditValue] = useState("");
+    const [cellEditDialogOpen, setCellEditDialogOpen] = useState(false);
     const [currentData, setCurrentData] = useState<any[]>(tickets);
     const resizingRef = useRef<{
         col: string;
@@ -147,8 +149,11 @@ export function WorkspaceTable({
     // Update currentData when tickets prop changes from parent (after sync or initial load)
     // But only if there are no uncommitted local changes
     useEffect(() => {
-        // Only update from parent if there are no local uncommitted changes
-        if (!hasUncommittedChangesRef.current) {
+        // Check if we rely on initial empty state (initializing)
+        const isInitializing = localSchema.length === 0 && schema.length > 0;
+
+        // Only update from parent if there are no local uncommitted changes OR we are initializing
+        if (!hasUncommittedChangesRef.current || isInitializing) {
             setCurrentData(tickets);
             setLocalSchema(schema);
 
@@ -158,7 +163,7 @@ export function WorkspaceTable({
                 initialData.current = [...tickets];
             }
         }
-    }, [tickets, schema]);
+    }, [tickets, schema, localSchema.length]);
 
     useEffect(() => {
         const checkSyncStatus = () => {
@@ -257,17 +262,18 @@ export function WorkspaceTable({
     const handleDoubleClick = (rowIndex: number, col: string, value: string) => {
         if (disabled || !isEditable) return;
         setEditingCell({ row: rowIndex, col });
-        setEditValue(value);
+        setEditValue(value || "");
+        setCellEditDialogOpen(true);
     };
 
-    const handleSaveEdit = () => {
+    const handleSaveEdit = (newValue: string) => {
         if (!editingCell) return;
         const { row, col } = editingCell;
         const newData = currentData.map((item, i) =>
             i === row
                 ? {
                     ...item,
-                    data: { ...item.data, [col]: editValue },
+                    data: { ...item.data, [col]: newValue },
                 }
                 : item
         );
@@ -279,8 +285,6 @@ export function WorkspaceTable({
                 JSON.stringify({ rows: newData, schema: localSchema })
             );
         }
-        setEditingCell(null);
-        setEditValue("");
     };
 
     // Helper function to update status and send email
@@ -669,46 +673,28 @@ export function WorkspaceTable({
                                                 className="p-0 border-r h-8 relative"
                                                 style={{ width: columnWidths[col.name] }}
                                             >
-                                                {editingCell?.row === rowIndex &&
-                                                    editingCell?.col === col.name ? (
-                                                    <Input
-                                                        autoFocus
-                                                        value={editValue}
-                                                        onChange={(e) => setEditValue(e.target.value)}
-                                                        onBlur={handleSaveEdit}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === "Enter") handleSaveEdit();
-                                                            if (e.key === "Escape") {
-                                                                setEditingCell(null);
-                                                                setEditValue("");
-                                                            }
-                                                        }}
-                                                        className="h-full w-full rounded-none border-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary px-2 text-xs"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full px-2 flex items-center">
-                                                        {col.name === "Feedback" ? (
-                                                            <FeedbackCell aiScore={parseFloat(row.data['AI Score'])} />
-                                                        ) : col.name === "Status" ? (
-                                                            <StatusCell
-                                                                value={row.data[col.name]}
-                                                                onChange={(val) => handleStatusChange(rowIndex, val)}
-                                                                disabled={disabled || !isEditable}
-                                                            />
-                                                        ) : col.name === "Informed" ? (
-                                                            <InformedCell
-                                                                value={row.data[col.name]}
-                                                                onChange={(val) => handleInformedChange(rowIndex, val)}
-                                                                rowData={row.data}
-                                                            />
-                                                        ) : (
-                                                            <TruncatedCell
-                                                                content={row.data[col.name]}
-                                                                onDoubleClick={() => handleDoubleClick(rowIndex, col.name, row.data[col.name])}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                )}
+                                                <div className="w-full h-full px-2 flex items-center">
+                                                    {col.name === "Feedback" ? (
+                                                        <FeedbackCell aiScore={parseFloat(row.data['AI Score'])} />
+                                                    ) : col.name === "Status" ? (
+                                                        <StatusCell
+                                                            value={row.data[col.name]}
+                                                            onChange={(val) => handleStatusChange(rowIndex, val)}
+                                                            disabled={disabled || !isEditable}
+                                                        />
+                                                    ) : col.name === "Informed" ? (
+                                                        <InformedCell
+                                                            value={row.data[col.name]}
+                                                            onChange={(val) => handleInformedChange(rowIndex, val)}
+                                                            rowData={row.data}
+                                                        />
+                                                    ) : (
+                                                        <TruncatedCell
+                                                            content={row.data[col.name]}
+                                                            onDoubleClick={() => handleDoubleClick(rowIndex, col.name, row.data[col.name])}
+                                                        />
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         ))}
                                     </TableRow>
@@ -776,6 +762,21 @@ export function WorkspaceTable({
                     }}
                 />
             )}
+
+            {/* Cell Edit Dialog */}
+            <CellEditDialog
+                open={cellEditDialogOpen}
+                onOpenChange={(open) => {
+                    setCellEditDialogOpen(open);
+                    if (!open) {
+                        setEditingCell(null);
+                        setEditValue("");
+                    }
+                }}
+                initialValue={editValue}
+                columnName={editingCell?.col || ""}
+                onSave={handleSaveEdit}
+            />
         </div>
     );
 }

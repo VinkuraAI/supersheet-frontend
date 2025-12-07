@@ -204,7 +204,7 @@ export function formatCellContent(content: any): string {
     return contentStr;
 }
 
-// Truncated Cell Component with Popover
+// Truncated Cell Component - Simple version for editing
 export function TruncatedCell({
     content,
     onDoubleClick,
@@ -213,21 +213,22 @@ export function TruncatedCell({
     onDoubleClick?: () => void;
 }) {
     const formattedContent = formatCellContent(content);
+    const isEmpty = !formattedContent || formattedContent.trim() === "";
 
     return (
-        <Popover>
-            <PopoverTrigger asChild>
-                <div
-                    className="cursor-pointer hover:text-primary hover:underline truncate w-full text-left"
-                    onDoubleClick={onDoubleClick}
-                    title={formattedContent}
-                >
-                    {formattedContent}
-                </div>
-            </PopoverTrigger>
-            <PopoverContent className="max-w-md p-4" side="top">
-                <div className="text-sm whitespace-pre-wrap break-words">{formattedContent}</div>
-            </PopoverContent>
-        </Popover>
+        <div
+            className="cursor-pointer hover:text-primary hover:underline truncate w-full text-left min-h-[20px]"
+            onDoubleClick={(e) => {
+                e.stopPropagation();
+                onDoubleClick?.();
+            }}
+            title={isEmpty ? "Double-click to edit" : formattedContent}
+        >
+            {isEmpty ? (
+                <span className="text-muted-foreground/40 italic text-xs">Empty</span>
+            ) : (
+                formattedContent
+            )}
+        </div>
     );
 }
