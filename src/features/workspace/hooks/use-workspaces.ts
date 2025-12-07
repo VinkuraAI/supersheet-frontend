@@ -128,8 +128,8 @@ export function useSendRowMail() {
 export function useSyncWorkspace() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ workspaceId, changes }: { workspaceId: string; changes: any }) =>
-      workspaceService.syncWorkspace(workspaceId, changes),
+    mutationFn: ({ workspaceId, changes, columns }: { workspaceId: string; changes: any; columns?: any[] }) =>
+      workspaceService.syncWorkspace(workspaceId, changes, columns),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.detail(variables.workspaceId) });
     },

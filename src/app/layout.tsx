@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { UserProvider } from "@/lib/user-context";
 import { WorkspaceProvider } from "@/lib/workspace-context";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/providers/query-provider";
 
 const geistSans = Geist({
@@ -49,6 +50,7 @@ export default function RootLayout({
             </UserProvider>
           </QueryProvider>
           <Toaster />
+          <SonnerToaster position="top-right" />
         </ThemeProvider>
       </body>
     </html>

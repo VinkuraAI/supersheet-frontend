@@ -17,6 +17,16 @@ import { UserList } from "@/components/workspace/settings/user-list";
 import { Role } from "@/utils/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, UserPlus, Copy, Check } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function UserManagementSection({ workspaceId }: { workspaceId: string }) {
   const { permissions, currentRole } = useWorkspace();
@@ -180,6 +190,7 @@ export default function WorkspaceSettingsPage() {
   const { selectedWorkspace, permissions, setWorkspaces, workspaces, isLoading } = useWorkspace();
   const [newName, setNewName] = useState(selectedWorkspace?.name || "");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
@@ -310,13 +321,39 @@ export default function WorkspaceSettingsPage() {
               <CardFooter className="border-t border-destructive/10 px-6 py-4 bg-destructive/5">
                 <Button
                   variant="destructive"
-                  onClick={() => setIsDeleting(true)}
+                  onClick={() => setDeleteDialogOpen(true)}
                   disabled={isDeleting}
                 >
                   {isDeleting ? "Deleting..." : "Delete Workspace"}
                 </Button>
               </CardFooter>
             </Card>
+
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your workspace
+                    and remove all associated data and members.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDelete();
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </div>

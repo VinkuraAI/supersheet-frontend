@@ -93,7 +93,11 @@ export const workspaceService = {
         await apiClient.post(`/workspaces/${workspaceId}/rows/${rowId}/send-mail`, {});
     },
 
-    syncWorkspace: async (workspaceId: string, changes: { added: any[], updated: any[], deleted: any[] }): Promise<void> => {
-        await apiClient.post(`/workspaces/${workspaceId}/sync`, changes);
+    syncWorkspace: async (workspaceId: string, changes: { added: any[], updated: any[], deleted: any[] }, columns?: any[]): Promise<void> => {
+        const payload: any = { ...changes };
+        if (columns) {
+            payload.columns = columns;
+        }
+        await apiClient.post(`/workspaces/${workspaceId}/sync`, payload);
     }
 };

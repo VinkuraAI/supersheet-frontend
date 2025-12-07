@@ -102,30 +102,28 @@ export function WorkspaceTable({
     const [emailComposerOpen, setEmailComposerOpen] = useState(false);
     const [selectedCandidateForEmail, setSelectedCandidateForEmail] = useState<{ name: string; email: string; rowIndex: number; newStatus: string } | null>(null);
 
-    // Initialize initialData and currentData once when component mounts with the original data
+    // Local schema state
+    const [localSchema, setLocalSchema] = useState<any[]>(schema);
+
+    // Initialize initialData, currentData, and localSchema once when component mounts
     useEffect(() => {
-        if (selectedWorkspace && !initialData.current.length) {
-            // First check if there's local storage data
-            const localData = localStorage.getItem(
-                `workspace-${selectedWorkspace._id}-data`
-            );
-            if (localData) {
-                const parsedData = JSON.parse(localData);
-                setData(parsedData);
-                initialData.current = [...parsedData]; // Store original data
-                setCurrentData(parsedData);
-            } else {
-                // Use the tickets prop data as the baseline
-                initialData.current = [...tickets]; // Store original data
-                setCurrentData(tickets);
-            }
+        if (selectedWorkspace) {
+            // We do NOT load from local storage on mount - we want to force a "reset to server state" behavior on refresh.
+            // But we should clear any lingering local storage to avoid confusion if they were expecting drafts to persist across reloads (per requirements).
+            localStorage.removeItem(`workspace-${selectedWorkspace._id}-data`);
+
+            // Use the props data as the baseline
+            initialData.current = [...tickets];
+            setCurrentData(tickets);
+            setLocalSchema(schema);
         }
-    }, [selectedWorkspace]); // Only run when workspace changes, not tickets
+    }, [selectedWorkspace]); // Only run when workspace changes
 
     // Track if there are uncommitted changes using a ref
     const hasUncommittedChangesRef = useRef(false);
 
     // Update our ref whenever currentData changes to track if we have uncommitted changes
+    // Verify sync status (schema changes or data changes)
     useEffect(() => {
         const added = currentData.some((row) => row.isNew);
         const updated = currentData.some((row) => {
@@ -140,8 +138,11 @@ export function WorkspaceTable({
             (initialRow) => !currentData.some((row) => row._id === initialRow._id)
         );
 
-        hasUncommittedChangesRef.current = added || updated || deleted;
-    }, [currentData, initialData]);
+        // Check for schema changes (columns added)
+        const schemaChanged = JSON.stringify(localSchema) !== JSON.stringify(schema);
+
+        hasUncommittedChangesRef.current = added || updated || deleted || schemaChanged;
+    }, [currentData, initialData, localSchema, schema]);
 
     // Update currentData when tickets prop changes from parent (after sync or initial load)
     // But only if there are no uncommitted local changes
@@ -149,21 +150,21 @@ export function WorkspaceTable({
         // Only update from parent if there are no local uncommitted changes
         if (!hasUncommittedChangesRef.current) {
             setCurrentData(tickets);
+            setLocalSchema(schema);
+
             // After successful sync, update initialData to match the fresh data from parent
             if (initialData.current.length !== tickets.length ||
                 JSON.stringify(initialData.current) !== JSON.stringify(tickets)) {
                 initialData.current = [...tickets];
             }
         }
-    }, [tickets]);
+    }, [tickets, schema]);
 
     useEffect(() => {
         const checkSyncStatus = () => {
             // Only check sync status if initialData has been properly initialized
-            if (initialData.current.length === 0) {
-                setIsSynced(true);
-                setShowSyncWarning(false);
-                return;
+            if (initialData.current.length === 0 && tickets.length > 0) {
+                // edge case where loading happening
             }
 
             const added = currentData.some((row) => row.isNew);
@@ -179,7 +180,9 @@ export function WorkspaceTable({
                 (initialRow) => !currentData.some((row) => row._id === initialRow._id)
             );
 
-            if (added || updated || deleted) {
+            const schemaChanged = JSON.stringify(localSchema) !== JSON.stringify(schema);
+
+            if (added || updated || deleted || schemaChanged) {
                 setIsSynced(false);
                 setShowSyncWarning(true);
             } else {
@@ -189,11 +192,11 @@ export function WorkspaceTable({
         };
 
         checkSyncStatus();
-    }, [currentData]);
+    }, [currentData, localSchema]);
 
     useEffect(() => {
         const initialWidths: Record<string, number> = { checkbox: 38 };
-        schema.forEach(col => {
+        localSchema.forEach(col => {
             // Set different default widths based on column type
             if (col.name === "Feedback") {
                 initialWidths[col.name] = 270; // Wider for feedback text
@@ -216,7 +219,7 @@ export function WorkspaceTable({
             }
         });
         setColumnWidths(initialWidths);
-    }, [schema]);
+    }, [localSchema]);
 
     // Handle column resize
     const handleMouseDown = (col: string, e: React.MouseEvent) => {
@@ -273,7 +276,7 @@ export function WorkspaceTable({
         if (selectedWorkspace) {
             localStorage.setItem(
                 `workspace-${selectedWorkspace._id}-data`,
-                JSON.stringify(newData)
+                JSON.stringify({ rows: newData, schema: localSchema })
             );
         }
         setEditingCell(null);
@@ -304,7 +307,7 @@ export function WorkspaceTable({
         if (selectedWorkspace) {
             localStorage.setItem(
                 `workspace-${selectedWorkspace._id}-data`,
-                JSON.stringify(newData)
+                JSON.stringify({ rows: newData, schema: localSchema })
             );
         }
 
@@ -351,7 +354,7 @@ export function WorkspaceTable({
         if (selectedWorkspace) {
             localStorage.setItem(
                 `workspace-${selectedWorkspace._id}-data`,
-                JSON.stringify(newData)
+                JSON.stringify({ rows: newData, schema: localSchema })
             );
         }
 
@@ -434,10 +437,11 @@ export function WorkspaceTable({
         initialData.current = newData;
 
         // Save to localStorage
+        // Save to localStorage
         if (selectedWorkspace) {
             localStorage.setItem(
                 `workspace-${selectedWorkspace._id}-data`,
-                JSON.stringify(newData)
+                JSON.stringify({ rows: newData, schema: localSchema })
             );
         }
     };
@@ -454,7 +458,7 @@ export function WorkspaceTable({
         if (selectedWorkspace) {
             localStorage.setItem(
                 `workspace-${selectedWorkspace._id}-data`,
-                JSON.stringify(newData)
+                JSON.stringify({ rows: newData, schema: localSchema })
             );
         }
     };
@@ -469,7 +473,7 @@ export function WorkspaceTable({
         if (selectedWorkspace) {
             localStorage.setItem(
                 `workspace-${selectedWorkspace._id}-data`,
-                JSON.stringify(newData)
+                JSON.stringify({ rows: newData, schema: localSchema })
             );
         }
         setSelectedRows(new Set());
@@ -479,11 +483,12 @@ export function WorkspaceTable({
         if (disabled || !isEditable) return;
         const newColumnName = prompt("Enter new column name");
         if (newColumnName) {
+            // Update local schema state
             const newColumn = { name: newColumnName, type: "text", isDefault: false };
-            // This component doesn't own the schema, it should be passed up.
-            // For now, let's update the local filteredSchema state to make it appear.
-            // setFilteredSchema([...filteredSchema, newColumn]);
+            const newSchema = [...localSchema, newColumn];
+            setLocalSchema(newSchema);
 
+            // Update rows with new key
             const newData = currentData.map((row) => ({
                 ...row,
                 data: {
@@ -496,7 +501,7 @@ export function WorkspaceTable({
             if (selectedWorkspace) {
                 localStorage.setItem(
                     `workspace-${selectedWorkspace._id}-data`,
-                    JSON.stringify(newData)
+                    JSON.stringify({ rows: newData, schema: newSchema })
                 );
             }
         }
@@ -521,7 +526,8 @@ export function WorkspaceTable({
         try {
             await syncWorkspace({
                 workspaceId: selectedWorkspace?._id,
-                changes: { added, updated, deleted }
+                changes: { added, updated, deleted },
+                columns: localSchema // Send the current local schema to persist column changes
             });
 
             if (selectedWorkspace) {
@@ -626,7 +632,7 @@ export function WorkspaceTable({
                                     disabled={disabled}
                                 />
                             </TableHead>
-                            {schema.map((col) => (
+                            {localSchema.map((col) => (
                                 <TableHead
                                     key={col.name}
                                     className="relative border-r px-2 h-8 text-xs font-medium select-none group"
@@ -657,7 +663,7 @@ export function WorkspaceTable({
                                                 disabled={disabled}
                                             />
                                         </TableCell>
-                                        {schema.map((col) => (
+                                        {localSchema.map((col) => (
                                             <TableCell
                                                 key={`${rowIndex}-${col.name}`}
                                                 className="p-0 border-r h-8 relative"

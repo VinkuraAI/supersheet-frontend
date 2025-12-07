@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
       // We must use the full backend URL here as this is a server-to-server request.
       // The /api proxy is for client-side requests only.
       const backendUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/workspaces`;
-      
+
       const response = await fetch(backendUrl, {
         headers: {
           'Cookie': `access_token=${accessToken.value}`
@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
       if (response.ok) {
         const workspaces = await response.json();
         // If the user has one or more workspaces, redirect them to the main app.
-        if (workspaces && workspaces.length > 1 ) {
+        if (workspaces && workspaces.length > 1) {
           return NextResponse.redirect(new URL('/workspace', request.url));
         }
       }
@@ -49,5 +49,5 @@ export async function middleware(request: NextRequest) {
 
 // See "Matching Paths" below to learn more
 export const config = {
-  matcher: ['/workspace/:path*', '/hr/workspace/:path*', '/pm/workspace/:path*', '/workspace-setup/:path*', '/welcome'],
+  matcher: ['/workspace/:path*', '/hr/workspace/:path*', '/pm/workspace/:path*', '/workspace-setup/:path*', '/welcome', '/dashboard/:path*', '/user/:path*'],
 }

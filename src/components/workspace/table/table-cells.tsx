@@ -97,7 +97,7 @@ export function InformedCell({
 
     return (
         <>
-            <Select onValueChange={handleInform}>
+            <Select value="" onValueChange={handleInform}>
                 <SelectTrigger className="h-7 text-xs">
                     <SelectValue placeholder="Not Informed" />
                 </SelectTrigger>
@@ -117,6 +117,16 @@ export function InformedCell({
     );
 }
 
+// Status flow definition
+const STATUS_FLOW: Record<string, string[]> = {
+    "New": ["Shortlisted", "Rejected", "Archived"],
+    "Shortlisted": ["Interviewed", "Rejected", "Archived"],
+    "Interviewed": ["Hired", "Rejected", "Archived"],
+    "Hired": [], // Final state
+    "Rejected": [], // Final state
+    "Archived": [] // Final state
+};
+
 // Status Cell Component
 export function StatusCell({
     value,
@@ -127,27 +137,42 @@ export function StatusCell({
     onChange: (newValue: string) => void;
     disabled?: boolean;
 }) {
-    const currentStatus = STATUS_OPTIONS.find(opt => opt.value === value) || STATUS_OPTIONS[0];
+    const currentStatusLabel = value || "New";
+    const currentStatus = STATUS_OPTIONS.find(opt => opt.value === currentStatusLabel) || STATUS_OPTIONS[0];
+    const allowedTransitions = STATUS_FLOW[currentStatusLabel] || [];
+
+    // Always allow keeping the current status or if flow is undefined (fallback)
+    const isOptionDisabled = (optionValue: string) => {
+        if (optionValue === currentStatusLabel) return false;
+        // If current status is final (empty allowed array), disable everything else
+        if (allowedTransitions.length === 0) return true;
+        return !allowedTransitions.includes(optionValue);
+    };
 
     return (
-        <Select value={value || "New"} onValueChange={onChange} disabled={disabled}>
+        <Select value={currentStatusLabel} onValueChange={onChange} disabled={disabled}>
             <SelectTrigger
                 className={`h-7 text-xs border ${currentStatus.color} font-medium`}
             >
                 <SelectValue />
             </SelectTrigger>
             <SelectContent>
-                {STATUS_OPTIONS.map((option) => (
-                    <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-xs"
-                    >
-                        <div className={`px-2 py-1 rounded ${option.color}`}>
-                            {option.value}
-                        </div>
-                    </SelectItem>
-                ))}
+                {STATUS_OPTIONS.map((option) => {
+                    const isDisabled = isOptionDisabled(option.value);
+                    return (
+                        <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            disabled={isDisabled}
+                            className="text-xs"
+                            title={isDisabled ? `Cannot transition from ${currentStatusLabel} to ${option.value}` : ""}
+                        >
+                            <div className={`px-2 py-1 rounded ${option.color} ${isDisabled ? "opacity-50" : ""}`}>
+                                {option.value}
+                            </div>
+                        </SelectItem>
+                    );
+                })}
             </SelectContent>
         </Select>
     );
