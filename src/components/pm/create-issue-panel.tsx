@@ -17,6 +17,16 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/utils/api.client";
+import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+
+const PREDEFINED_COLORS = [
+  "#3b82f6", // Blue (Default)
+  "#8b5cf6", // Purple
+  "#f59e0b", // Amber
+  "#ec4899", // Pink
+];
 
 interface CreateIssuePanelProps {
   isOpen: boolean;
@@ -42,9 +52,12 @@ export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: Cre
   const [reporter, setReporter] = useState("current_user");
   const [labels, setLabels] = useState<string[]>([]);
   const [labelInput, setLabelInput] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [color, setColor] = useState("#3b82f6");
 
   // Validation State
-  const [errors, setErrors] = useState<{ summary?: boolean; project?: boolean }>({});
+  const [errors, setErrors] = useState<{ summary?: boolean; project?: boolean; dueDate?: boolean; startDate?: boolean }>({});
 
   // Pre-fill data if editing
   useEffect(() => {
@@ -59,6 +72,10 @@ export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: Cre
       setAssignee(data.assignee || "automatic");
       setReporter(data.reporter || "current_user");
       setLabels(data.labels || []);
+      setLabels(data.labels || []);
+      setDueDate(data.dueDate ? new Date(data.dueDate) : undefined);
+      setStartDate(data.startDate ? new Date(data.startDate) : undefined);
+      setColor(data.color || "#3b82f6");
     } else {
       // Reset form when opening fresh
       setSelectedProjectId(selectedWorkspace?._id || "");
@@ -70,6 +87,9 @@ export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: Cre
       setAssignee("automatic");
       setReporter("current_user");
       setLabels([]);
+      setDueDate(undefined);
+      setStartDate(undefined);
+      setColor("#3b82f6");
     }
     setErrors({});
   }, [initialData, isOpen, selectedWorkspace]);
@@ -79,7 +99,7 @@ export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: Cre
     const targetWorkspace = workspaces.find(w => w._id === selectedProjectId) || (selectedWorkspace?._id === selectedProjectId ? selectedWorkspace : null);
 
     // Validation
-    const newErrors: { summary?: boolean; project?: boolean } = {};
+    const newErrors: { summary?: boolean; project?: boolean; dueDate?: boolean } = {};
     let hasError = false;
 
     if (!summary.trim()) {
@@ -89,6 +109,21 @@ export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: Cre
     if (!targetWorkspace) {
       newErrors.project = true;
       hasError = true;
+    }
+    if (!dueDate) {
+      newErrors.dueDate = true;
+      hasError = true;
+    }
+    if (startDate && dueDate && startDate > dueDate) {
+       newErrors.startDate = true;
+       hasError = true;
+       toast({
+         variant: "destructive",
+         title: "Invalid Dates",
+         description: "Start date cannot be after due date.",
+       });
+       // Don't disable submission solely on date logic here if we rely on backend, 
+       // but for good UX we should block it.
     }
 
     if (hasError) {
@@ -110,6 +145,9 @@ export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: Cre
       assignee: assignee === "automatic" ? "Unassigned" : assignee === "current_user" ? (user as any)?.name || "User" : assignee,
       reporter: reporter === "current_user" ? (user as any)?.name || "User" : reporter,
       labels,
+      dueDate: dueDate?.toISOString(),
+      startDate: startDate?.toISOString(),
+      color,
       updatedAt: new Date().toISOString(),
     };
 
@@ -393,20 +431,114 @@ export function CreateIssuePanel({ isOpen, onClose, initialData, onDelete }: Cre
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+             <div className="space-y-1.5 flex flex-col">
               <label className="text-xs font-bold text-slate-600 uppercase">Start date</label>
-              <div className="flex items-center gap-2 p-2 border border-slate-200 rounded-sm hover:bg-slate-50 cursor-pointer">
-                <span className="text-sm text-slate-400">None</span>
-                <Calendar className="w-4 h-4 ml-auto text-slate-400" />
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-slate-200 rounded-sm h-10 hover:bg-slate-50",
+                      !startDate && "text-muted-foreground",
+                      errors.startDate && "border-red-500 bg-red-50 text-red-600"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      if (date) setErrors(prev => ({ ...prev, startDate: false }));
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+               {errors.startDate && <p className="text-xs text-red-500">Start date {'>'} Due date</p>}
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-600 uppercase">Due date</label>
-              <div className="flex items-center gap-2 p-2 border border-slate-200 rounded-sm hover:bg-slate-50 cursor-pointer">
-                <span className="text-sm text-slate-400">None</span>
-                <Calendar className="w-4 h-4 ml-auto text-slate-400" />
-              </div>
+
+            <div className="space-y-1.5 flex flex-col">
+              <label className="text-xs font-bold text-slate-600 uppercase">Due date *</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-slate-200 rounded-sm h-10 hover:bg-slate-50",
+                      !dueDate && "text-muted-foreground",
+                      errors.dueDate && "border-red-500 bg-red-50 text-red-600"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={(date) => {
+                      setDueDate(date);
+                      if (date) setErrors(prev => ({ ...prev, dueDate: false }));
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              {errors.dueDate && <p className="text-xs text-red-500">Due date is required</p>}
             </div>
+          </div>
+          
+          {/* Color Picker - Optimized & in Popover */}
+          <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-600 uppercase">Color</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                   <Button variant="outline" className="w-full h-10 justify-start px-3 border-slate-200 hover:bg-slate-50 relative">
+                     <div className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: color }} />
+                     <span className="text-slate-600">{color}</span>
+                     <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                   </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" align="start">
+                    <div className="grid grid-cols-5 gap-2 mb-3">
+                       {PREDEFINED_COLORS.map((c) => (
+                        <button
+                            key={c}
+                            className={cn(
+                                "w-8 h-8 rounded-full border border-slate-200 transition-all hover:scale-110",
+                                color === c && "ring-2 ring-blue-500 ring-offset-2"
+                            )}
+                            style={{ backgroundColor: c }}
+                            onClick={() => setColor(c)}
+                        />
+                       ))}
+                    </div>
+                    <div className="relative">
+                         <label className="text-xs font-bold text-slate-500 mb-1 block">Custom Hex</label>
+                         <div className="flex gap-2">
+                             <div className="relative w-8 h-8 rounded-md overflow-hidden border border-slate-200 shrink-0">
+                                <input 
+                                    type="color" 
+                                    value={color}
+                                    onChange={(e) => setColor(e.target.value)}
+                                    className="absolute inset-0 w-[150%] h-[150%] -top-[25%] -left-[25%] p-0 cursor-pointer border-0"
+                                />
+                             </div>
+                             <Input 
+                                value={color} 
+                                onChange={(e) => setColor(e.target.value)}
+                                className="h-8 text-xs font-mono uppercase"
+                             />
+                         </div>
+                    </div>
+                </PopoverContent>
+              </Popover>
           </div>
 
           {/* Attachments */}
