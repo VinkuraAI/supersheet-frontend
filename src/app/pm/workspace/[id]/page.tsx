@@ -11,6 +11,12 @@ import { KanbanBoard } from "@/components/pm/kanban-board";
 import { PMSummaryView } from "@/components/pm/pm-summary-view";
 import { PMListView } from "@/components/pm/pm-list-view";
 import { CreateIssuePanel } from "@/components/pm/create-issue-panel";
+import { CalendarView } from "@/components/pm/calendar/CalendarView";
+import { RequestList } from "@/components/pm/requests/RequestList";
+import { RequestCreateModal } from "@/components/pm/requests/RequestCreateModal";
+import { IssueList } from "@/components/pm/issues/IssueList";
+import { IssueCreateModal } from "@/components/pm/issues/IssueCreateModal";
+import { AttachmentsView } from "@/components/pm/attachments/AttachmentsView";
 import { TopBar } from "@/components/service-desk/topbar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -22,8 +28,12 @@ export default function PMWorkspacePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState('summary');
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
+  const [editingTask, setEditingTask] = useState<any | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [requestTaskContext, setRequestTaskContext] = useState<{ id: string; title: string } | undefined>(undefined);
+  const [issueTaskContext, setIssueTaskContext] = useState<{ id: string; title: string } | undefined>(undefined);
   const { toast } = useToast();
 
   // Sidebar state
@@ -55,7 +65,7 @@ export default function PMWorkspacePage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const loadWorkspace = async () => {
+  const fetchTasks = async () => {
     if (params.id) {
       try {
         const details = await workspaceService.getWorkspaceDetails(params.id as string);
@@ -70,7 +80,7 @@ export default function PMWorkspacePage() {
   };
 
   useEffect(() => {
-    loadWorkspace();
+    fetchTasks();
   }, [params.id]);
 
   const handleCreateClick = () => {
@@ -87,7 +97,7 @@ export default function PMWorkspacePage() {
     setIsCreatePanelOpen(false);
     setEditingTask(null);
     // Refresh tasks after close (in case created/edited)
-    loadWorkspace();
+    fetchTasks();
   };
 
   const handleTaskMove = async (result: any) => {
@@ -113,7 +123,7 @@ export default function PMWorkspacePage() {
     } catch (error) {
       console.error("Failed to update task status", error);
       // Revert on error
-      loadWorkspace();
+      fetchTasks();
     }
   };
 
@@ -137,8 +147,18 @@ export default function PMWorkspacePage() {
         description: "Failed to delete task.",
       });
       // Revert
-      loadWorkspace();
+      fetchTasks();
     }
+  };
+
+  const handleRequest = (task: any) => {
+    setRequestTaskContext({ id: task._id, title: task.data?.summary });
+    setIsRequestModalOpen(true);
+  };
+
+  const handleReportIssue = (task: any) => {
+    setIssueTaskContext({ id: task._id, title: task.data?.summary });
+    setIsIssueModalOpen(true);
   };
 
   if (isLoading) {
@@ -146,42 +166,26 @@ export default function PMWorkspacePage() {
   }
 
   return (
-    <main className="min-h-dvh flex flex-col text-[0.75rem]">
-      <header className="fixed top-0 left-0 right-0 z-40 h-[60px] border-b bg-card">
-        <TopBar
-          onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
-          onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
-          rightSidebarOpen={rightSidebarOpen}
-        />
-      </header>
+    <div className="h-screen w-full bg-slate-50 flex flex-col">
+      <TopBar
+        onToggleLeftSidebar={() => setLeftSidebarOpen(!leftSidebarOpen)}
+        onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)}
+        rightSidebarOpen={rightSidebarOpen}
+      />
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar removed as per design, using TopNav now */}
 
-      <section className="flex flex-1 overflow-hidden relative pt-[60px]">
-        {/* Left sidebar - fixed and toggleable */}
-        <aside
-          className={`
-            fixed left-0 top-[60px] bottom-0 z-30 w-[256px] 
-            bg-card border-r transition-transform duration-300
-            overflow-y-auto scrollbar-hide
-            ${leftSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          `}
-          aria-label="Project navigation"
-        >
-          <SideNav />
-        </aside>
-
-        {/* Main Content */}
-        <div
-          className={`
-            flex-1 flex flex-col transition-all duration-300 min-w-0
-            ${leftSidebarOpen ? "ml-[256px]" : "ml-0"}
-            ${rightSidebarOpen ? "mr-[240px]" : "mr-0"}
-          `}
-        >
-          {/* Top Navigation for PM Views */}
+        <div className="flex-1 flex flex-col min-w-0">
           <PMTopNav currentView={currentView} onViewChange={setCurrentView} />
 
-          {/* View Content */}
-          <div className="flex-1 overflow-hidden relative p-4">
+          <div className="flex-1 overflow-hidden p-6">
+            {currentView === 'summary' && (
+              <PMSummaryView
+                workspaceName={selectedWorkspace?.name || "Workspace"}
+                onCreateClick={handleCreateClick}
+                tasks={tasks}
+              />
+            )}
             {currentView === 'board' && (
               <KanbanBoard
                 workspaceId={params.id as string}
@@ -192,13 +196,6 @@ export default function PMWorkspacePage() {
                 onDeleteTask={handleDeleteTask}
               />
             )}
-            {currentView === 'summary' && (
-              <PMSummaryView
-                workspaceName={selectedWorkspace?.name || "Workspace"}
-                onCreateClick={handleCreateClick}
-                tasks={tasks}
-              />
-            )}
             {currentView === 'list' && (
               <PMListView
                 workspaceId={params.id as string}
@@ -206,33 +203,57 @@ export default function PMWorkspacePage() {
                 onEditTask={handleEditTask}
                 tasks={tasks}
                 onDeleteTask={handleDeleteTask}
+                onRequest={handleRequest}
+                onReportIssue={handleReportIssue}
               />
             )}
+            {currentView === 'calendar' && (
+              <CalendarView
+                tasks={tasks}
+                onCreateClick={handleCreateClick}
+                onEditTask={handleEditTask}
+              />
+            )}
+            {currentView === 'approvals' && <RequestList onCreate={() => setIsRequestModalOpen(true)} />}
+            {currentView === 'issues' && <IssueList onCreate={() => setIsIssueModalOpen(true)} />}
+            {currentView === 'archived' && <IssueList isArchived />}
+            {currentView === 'attachments' && <AttachmentsView />}
           </div>
         </div>
 
-        {/* Right context panel placeholder - if needed later */}
-        {/* 
-        <aside
-          className={`
-            fixed right-0 top-[60px] bottom-0 z-30 w-[240px]
-            bg-card border-l transition-transform duration-300
-            overflow-y-auto scrollbar-hide
-            ${rightSidebarOpen ? "translate-x-0" : "translate-x-full"}
-          `}
-        >
-           <RightPanel /> 
-        </aside> 
-        */}
-      </section>
+        <CreateIssuePanel
+          isOpen={isCreatePanelOpen}
+          onClose={handleClosePanel}
+          initialData={editingTask}
+          onDelete={() => {
+             if (editingTask) {
+                handleDeleteTask(editingTask._id);
+                setIsCreatePanelOpen(false);
+                setEditingTask(null);
+             }
+          }}
+        />
 
-      {/* Create/Edit Issue Panel */}
-      <CreateIssuePanel
-        isOpen={isCreatePanelOpen}
-        onClose={handleClosePanel}
-        initialData={editingTask}
-        onDelete={handleDeleteTask}
-      />
-    </main>
+        <RequestCreateModal
+          isOpen={isRequestModalOpen}
+          onClose={() => {
+            setIsRequestModalOpen(false);
+            setRequestTaskContext(undefined);
+          }}
+          taskId={requestTaskContext?.id}
+          taskTitle={requestTaskContext?.title}
+        />
+
+        <IssueCreateModal
+          isOpen={isIssueModalOpen}
+          onClose={() => {
+             setIsIssueModalOpen(false);
+             setIssueTaskContext(undefined);
+          }}
+          taskId={issueTaskContext?.id}
+          taskTitle={issueTaskContext?.title}
+        />
+      </div>
+    </div>
   );
 }
