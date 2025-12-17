@@ -42,7 +42,14 @@ export function useDeleteWorkspace() {
 
   return useMutation({
     mutationFn: workspaceService.deleteWorkspace,
-    onSuccess: () => {
+    onSuccess: (_, deletedWorkspaceId) => {
+      // Remove the specific workspace detail from cache
+      queryClient.removeQueries({ queryKey: workspaceKeys.detail(deletedWorkspaceId) });
+      // Remove workspace members cache
+      queryClient.removeQueries({ queryKey: workspaceKeys.members(deletedWorkspaceId) });
+      // Remove workspace forms cache
+      queryClient.removeQueries({ queryKey: workspaceKeys.forms(deletedWorkspaceId) });
+      // Invalidate the workspace list to refetch
       queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
     },
   });

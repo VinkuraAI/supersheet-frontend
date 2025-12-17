@@ -151,8 +151,9 @@ export function SideNav() {
     try {
       await deleteWorkspace(workspaceToDelete._id);
 
+      // If we deleted the currently selected workspace, redirect to dashboard
       if (selectedWorkspace?._id === workspaceToDelete._id) {
-        // Selection logic handled by context
+        router.push('/dashboard');
       }
 
       toast.success(

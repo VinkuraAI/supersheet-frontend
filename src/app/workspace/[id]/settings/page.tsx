@@ -16,7 +16,213 @@ import { useWorkspaceMembers, useInviteMember, useRemoveMember, useUpdateMemberR
 import { UserList } from "@/components/workspace/settings/user-list";
 import { Role } from "@/utils/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, UserPlus, Copy, Check } from "lucide-react";
+import { Loader2, UserPlus, Copy, Check, Plus, Trash2, Pencil } from "lucide-react"; // Added Plus, Trash2, Pencil
+import { useTeams, useAddTeam, useUpdateTeam, useDeleteTeam } from "@/features/workspace/hooks/use-teams";
+import { Checkbox } from "@/components/ui/checkbox";
+
+function TeamManagementSection({ workspaceId }: { workspaceId: string }) {
+  const { data: teams = [], isLoading: isTeamsLoading } = useTeams(workspaceId);
+  const { mutateAsync: addTeam, isPending: isAddingTeam } = useAddTeam();
+  const { mutateAsync: updateTeam, isPending: isUpdatingTeam } = useUpdateTeam();
+  const { mutateAsync: deleteTeam, isPending: isDeletingTeam } = useDeleteTeam();
+
+  const { data: members = [] } = useWorkspaceMembers(workspaceId);
+  const { permissions } = useWorkspace();
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+
+  const [teamName, setTeamName] = useState("");
+  const [selectedLeader, setSelectedLeader] = useState<string>("");
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+
+  // Reset form
+  const resetForm = () => {
+    setTeamName("");
+    setSelectedLeader("");
+    setSelectedMembers([]);
+    setIsAdding(false);
+    setEditingTeamId(null);
+  }
+
+  const handleStartEdit = (team: any) => {
+    setTeamName(team.name);
+    setSelectedLeader(team.leader?._id || team.leader); // Handle populated vs unpopulated
+    // Members might be objects or IDs
+    const memberIds = team.members.map((m: any) => m._id || m); // Handle populated
+    setSelectedMembers(memberIds);
+    setEditingTeamId(team._id);
+    setIsAdding(true); // Reuse the form visibility
+  };
+
+  const handleSubmit = async () => {
+    if (!teamName || !selectedLeader) return;
+
+    const teamMembersToSend = [...selectedMembers];
+    if (!teamMembersToSend.includes(selectedLeader)) {
+      teamMembersToSend.push(selectedLeader);
+    }
+
+    try {
+      if (editingTeamId) {
+        await updateTeam({
+          workspaceId,
+          teamId: editingTeamId,
+          teamData: {
+            name: teamName,
+            leaderId: selectedLeader,
+            memberIds: teamMembersToSend
+          }
+        });
+        toast.success("Team updated successfully");
+      } else {
+        await addTeam({
+          workspaceId,
+          teamData: {
+            name: teamName,
+            leaderId: selectedLeader,
+            memberIds: teamMembersToSend
+          }
+        });
+        toast.success("Team created successfully");
+      }
+      resetForm();
+    } catch (error: any) {
+      console.error("Failed to save team:", error);
+      toast.error(error.response?.data?.error || "Failed to save team");
+    }
+  };
+
+  const handleDelete = async (teamId: string) => {
+    if (!confirm("Are you sure you want to delete this team? Tasks assigned to this team will be unassigned.")) return;
+    try {
+      await deleteTeam({ workspaceId, teamId });
+      toast.success("Team deleted successfully");
+    } catch (error: any) {
+      console.error("Failed to delete team:", error);
+      toast.error("Failed to delete team");
+    }
+  };
+
+  const toggleMemberSelection = (userId: string) => {
+    if (selectedMembers.includes(userId)) {
+      setSelectedMembers(selectedMembers.filter(id => id !== userId));
+    } else {
+      if (selectedMembers.length >= 7) {
+        toast.warning("Max 8 members per team"); // 7 + leader
+        return;
+      }
+      setSelectedMembers([...selectedMembers, userId]);
+    }
+  };
+
+  // Loading state for submit button
+  const isSubmitting = isAddingTeam || isUpdatingTeam;
+
+  return (
+    <div className="space-y-6">
+      {!isAdding && ( // Show list only when not editing/adding
+        <div className="grid gap-4 md:grid-cols-2">
+          {teams.map((team: any) => (
+            <Card key={team._id}>
+              <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-base">{team.name}</CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    Leader: {team.leader?.name || "Unknown"}
+                  </CardDescription>
+                </div>
+                {permissions.canManageWorkspace && (
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => handleStartEdit(team)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(team._id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground mb-2">Members ({team.members?.length || 0})</p>
+                <div className="flex flex-wrap gap-1">
+                  {team.members?.map((m: any) => (
+                    <span key={m._id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
+                      {m.name}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {isAdding ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{editingTeamId ? "Edit Team" : "New Team Details"}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold">Team Name</label>
+              <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="e.g. Design Team" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold">Team Leader</label>
+              <Select value={selectedLeader} onValueChange={setSelectedLeader}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Leader" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members.map((m: any) => (
+                    <SelectItem key={m.user._id} value={m.user._id}>
+                      {m.user.name} ({m.user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold">Members (Max 8)</label>
+              <div className="border rounded-md p-2 max-h-[200px] overflow-y-auto space-y-2">
+                {members.map((m: any) => (
+                  <div key={m.user._id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`member-${m.user._id}`}
+                      checked={selectedMembers.includes(m.user._id)}
+                      onCheckedChange={() => toggleMemberSelection(m.user._id)}
+                      disabled={m.user._id === selectedLeader} // Leader is auto-included
+                    />
+                    <label htmlFor={`member-${m.user._id}`} className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      {m.user.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={resetForm}>Cancel</Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting || !teamName || !selectedLeader}>
+                {isSubmitting ? "Saving..." : (editingTeamId ? "Update Team" : "Create Team")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        teams.length < 2 && permissions.canManageWorkspace && (
+          <Button variant="outline" className="w-full border-dashed" onClick={() => setIsAdding(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Team
+          </Button>
+        )
+      )}
+      {teams.length >= 2 && !isAdding && <p className="text-xs text-muted-foreground text-center">Maximum 2 teams reached.</p>}
+    </div>
+  );
+}
 
 function UserManagementSection({ workspaceId }: { workspaceId: string }) {
   const { permissions, currentRole } = useWorkspace();
@@ -282,6 +488,21 @@ export default function WorkspaceSettingsPage() {
                 </Button>
               </CardFooter>
             </Card>
+
+            {/* Team Management Section - Only for PM Workspaces */}
+            {(selectedWorkspace?.mainFocus === 'product-management' || selectedWorkspace?.mainFocus === 'project-management') && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Manage Teams</CardTitle>
+                  <CardDescription>
+                    Create and manage teams within your project.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TeamManagementSection workspaceId={selectedWorkspace._id} />
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>

@@ -11,7 +11,6 @@ import { useWorkspace } from "@/lib/workspace-context";
 interface TeamMember {
   name: string;
   email: string;
-  role: string;
   isLeader: boolean;
 }
 
@@ -46,8 +45,8 @@ export default function PMSetupPage() {
   // Step 2: Team Setup
   const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState<TeamMember[]>([
-    { name: "", email: "", role: "Editor", isLeader: false },
-    { name: "", email: "", role: "Editor", isLeader: false }
+    { name: "", email: "", isLeader: false },
+    { name: "", email: "", isLeader: false }
   ]);
 
   // Check workspace limit
@@ -148,7 +147,7 @@ export default function PMSetupPage() {
   };
 
   const handleAddMember = () => {
-    setMembers([...members, { name: "", email: "", role: "Editor", isLeader: false }]);
+    setMembers([...members, { name: "", email: "", isLeader: false }]);
   };
 
   const handleRemoveMember = (index: number) => {
@@ -178,15 +177,28 @@ export default function PMSetupPage() {
 
     setIsCreating(true);
 
-    // 1. Create Workspace
+    // Prepare team member emails
+    const teamMemberEmails = members
+      .filter(m => m.email && m.email !== user.email)
+      .map(m => m.email);
+
+    // Find leader
+    const leader = members.find(m => m.isLeader);
+    const leaderId = leader?.email === user.email ? user.id : null; // If leader is creator, use their ID
+
     const payload = {
       name: workspaceName,
       userId: user.id,
       mainFocus: 'project-management',
-      primaryHRNeed: 'Project Management', // Default for PM
+      primaryHRNeed: 'Project Management',
       jd: projectDetails,
       requirements: [],
       table: {},
+      teamDetails: {
+        name: teamName,
+        leaderId: leaderId || user.id, // Default to creator if no leader selected
+        members: teamMemberEmails, // Send array of emails
+      },
     };
 
     try {
@@ -199,34 +211,13 @@ export default function PMSetupPage() {
       // Set the selected workspace immediately
       setSelectedWorkspace(newWorkspace);
 
-      // 2. Invite Members (if any)
-      // Filter out empty members and the creator (if they added themselves)
-      const membersToInvite = members.filter(m => m.email && m.email !== user.email);
-
-      if (membersToInvite.length > 0) {
-        // We do this sequentially or in parallel. Parallel is faster.
-        await Promise.all(membersToInvite.map(async (member) => {
-          if (!member.email) return;
-          try {
-            await apiClient.post(`/workspaces/${newWorkspace._id}/invite`, {
-              email: member.email,
-              role: member.role.toLowerCase(), // Ensure lowercase for API enum
-              origin: window.location.origin
-            });
-          } catch (inviteError) {
-            console.error(`Failed to invite ${member.email}:`, inviteError);
-            // We continue even if one invite fails, but maybe show a toast?
-          }
-        }));
-      }
-
-      // 3. Refresh Context (React Query should handle this if we invalidate queries)
+      // Refresh Context (React Query should handle this if we invalidate queries)
       await queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
 
       // Wait for the remaining time of the 5s delay
       await minDelayPromise;
 
-      // 4. Redirect
+      // Redirect
       router.push(`/pm/workspace/${newWorkspace._id}`);
     } catch (error) {
       console.error('Error creating workspace:', error);
@@ -369,15 +360,9 @@ export default function PMSetupPage() {
                           placeholder="Email"
                           className="w-full p-2 border rounded-lg text-sm"
                         />
-                        <select
-                          value={member.role}
-                          onChange={(e) => updateMember(index, 'role', e.target.value)}
-                          className="w-full p-2 border rounded-lg text-sm"
-                        >
-                          <option value="Editor">Editor</option>
-                          <option value="Admin">Admin</option>
-                          <option value="Viewer">Viewer</option>
-                        </select>
+                        <div className="text-xs text-slate-500 px-2">
+                          Role: Team Member {member.isLeader && '(Leader)'}
+                        </div>
                       </div>
 
                       <div className="flex flex-col gap-2 items-center pt-1">

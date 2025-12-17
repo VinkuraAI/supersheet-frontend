@@ -10,7 +10,7 @@ import { PMTopNav } from "@/components/pm/pm-top-nav";
 import { KanbanBoard } from "@/components/pm/kanban-board";
 import { PMSummaryView } from "@/components/pm/pm-summary-view";
 import { PMListView } from "@/components/pm/pm-list-view";
-import { CreateIssuePanel } from "@/components/pm/create-issue-panel";
+import { CreateTaskDialog } from "@/components/pm/CreateTaskDialog";
 import { CalendarView } from "@/components/pm/calendar/CalendarView";
 import { RequestList } from "@/components/pm/requests/RequestList";
 import { RequestCreateModal } from "@/components/pm/requests/RequestCreateModal";
@@ -173,7 +173,10 @@ export default function PMWorkspacePage() {
         rightSidebarOpen={rightSidebarOpen}
       />
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar removed as per design, using TopNav now */}
+        {/* Left Sidebar */}
+        {leftSidebarOpen && (
+          <SideNav />
+        )}
 
         <div className="flex-1 flex flex-col min-w-0">
           <PMTopNav currentView={currentView} onViewChange={setCurrentView} />
@@ -221,16 +224,16 @@ export default function PMWorkspacePage() {
           </div>
         </div>
 
-        <CreateIssuePanel
+        <CreateTaskDialog
           isOpen={isCreatePanelOpen}
           onClose={handleClosePanel}
           initialData={editingTask}
           onDelete={() => {
-             if (editingTask) {
-                handleDeleteTask(editingTask._id);
-                setIsCreatePanelOpen(false);
-                setEditingTask(null);
-             }
+            if (editingTask) {
+              handleDeleteTask(editingTask._id);
+              setIsCreatePanelOpen(false);
+              setEditingTask(null);
+            }
           }}
         />
 
@@ -242,16 +245,18 @@ export default function PMWorkspacePage() {
           }}
           taskId={requestTaskContext?.id}
           taskTitle={requestTaskContext?.title}
+          availableTasks={tasks}
         />
 
         <IssueCreateModal
           isOpen={isIssueModalOpen}
           onClose={() => {
-             setIsIssueModalOpen(false);
-             setIssueTaskContext(undefined);
+            setIsIssueModalOpen(false);
+            setIssueTaskContext(undefined);
           }}
           taskId={issueTaskContext?.id}
           taskTitle={issueTaskContext?.title}
+          availableTasks={tasks}
         />
       </div>
     </div>

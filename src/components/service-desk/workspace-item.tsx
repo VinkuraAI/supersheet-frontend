@@ -67,6 +67,9 @@ export function WorkspaceItem({
     // Check if user has permission to see context menu (not a viewer)
     const canShowContextMenu = canPerformAction(workspace, ["owner", "admin", "editor"]);
 
+    // Check if workspace is PM type (hide Forms/Documents for PM)
+    const isPMWorkspace = workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management';
+
     return (
         <div>
             <ContextMenu>
@@ -115,8 +118,8 @@ export function WorkspaceItem({
                             </ShareWorkspaceDialog>
                         )}
 
-                        {/* Add Form - owner, admin, editor */}
-                        {canPerformAction(workspace, ["owner", "admin", "editor"]) && (
+                        {/* Add Form - owner, admin, editor (HR workspaces only) */}
+                        {!isPMWorkspace && canPerformAction(workspace, ["owner", "admin", "editor"]) && (
                             <ContextMenuItem
                                 onClick={() => {
                                     window.location.href = `/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/forms`;
@@ -127,15 +130,17 @@ export function WorkspaceItem({
                                 Add Form
                             </ContextMenuItem>
                         )}
-                        {/* Documents - all roles */}
-                        <ContextMenuItem
-                            onClick={() => {
-                                window.location.href = `/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/documents`;
-                            }}
-                        >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Documents
-                        </ContextMenuItem>
+                        {/* Documents - all roles (HR workspaces only) */}
+                        {!isPMWorkspace && (
+                            <ContextMenuItem
+                                onClick={() => {
+                                    window.location.href = `/${workspace.mainFocus === 'product-management' || workspace.mainFocus === 'project-management' ? 'pm' : 'hr'}/workspace/${workspace._id}/documents`;
+                                }}
+                            >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Documents
+                            </ContextMenuItem>
+                        )}
                         {/* Rename - owner, admin */}
                         {canPerformAction(workspace, ["owner", "admin"]) && (
                             <ContextMenuItem onClick={() => onRename(workspace)}>
