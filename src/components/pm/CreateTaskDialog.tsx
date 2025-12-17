@@ -76,6 +76,14 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
     // Form State
     const [projectName, setProjectName] = useState("");
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
+    // Initialize project ID with current workspace
+    useEffect(() => {
+        if (selectedWorkspace?._id && !selectedProjectId) {
+            setSelectedProjectId(selectedWorkspace._id);
+            setProjectName(selectedWorkspace.name);
+        }
+    }, [selectedWorkspace, selectedProjectId]);
     const [issueType, setIssueType] = useState("Task");
     const [status, setStatus] = useState("todo");
     const [description, setDescription] = useState("");

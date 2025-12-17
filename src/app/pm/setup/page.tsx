@@ -196,7 +196,7 @@ export default function PMSetupPage() {
       table: {},
       teamDetails: {
         name: teamName,
-        leaderId: leaderId || user.id, // Default to creator if no leader selected
+        leaderEmail: leader?.email || user.email, // Send leader email
         members: teamMemberEmails, // Send array of emails
       },
     };

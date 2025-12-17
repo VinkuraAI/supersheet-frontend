@@ -20,6 +20,7 @@ import { AttachmentsView } from "@/components/pm/attachments/AttachmentsView";
 import { TopBar } from "@/components/service-desk/topbar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import { PMSettingsView } from "@/components/pm/pm-settings-view";
 
 export default function PMWorkspacePage() {
   const params = useParams();
@@ -221,6 +222,7 @@ export default function PMWorkspacePage() {
             {currentView === 'issues' && <IssueList onCreate={() => setIsIssueModalOpen(true)} />}
             {currentView === 'archived' && <IssueList isArchived />}
             {currentView === 'attachments' && <AttachmentsView />}
+            {currentView === 'settings' && selectedWorkspace && <PMSettingsView workspaceId={selectedWorkspace._id} />}
           </div>
         </div>
 

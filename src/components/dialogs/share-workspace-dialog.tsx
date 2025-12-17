@@ -27,7 +27,7 @@ import { UserList } from "@/components/workspace/settings/user-list";
 
 interface ShareWorkspaceDialogProps {
   children: React.ReactNode;
-  workspace?: { _id: string; name: string };
+  workspace?: { _id: string; name: string; mainFocus?: string };
   canManageMembers?: boolean;
 }
 
@@ -111,7 +111,9 @@ export function ShareWorkspaceDialog({ children, workspace: propWorkspace, canMa
   };
 
   const totalMembers = members.length;
-  const maxMembers = 6; // 1 Owner + 5 Shared
+  // PM workspaces: 25 members, HR workspaces: 6 members
+  const isPMWorkspace = workspace?.mainFocus === 'product-management' || workspace?.mainFocus === 'project-management';
+  const maxMembers = isPMWorkspace ? 25 : 6;
   const sharedCount = members.filter((m: any) => m.role !== 'owner').length;
   const maxShared = 5;
 

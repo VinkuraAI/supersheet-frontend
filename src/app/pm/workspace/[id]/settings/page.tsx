@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-// import apiClient from "@/utils/api.client"; // Removed as we use hooks now
 import { ShareWorkspaceDialog } from "@/components/dialogs/share-workspace-dialog";
 import { WorkspaceLayout } from "@/components/workspace/workspace-layout";
 import { useWorkspaceMembers, useInviteMember, useRemoveMember, useUpdateMemberRole } from "@/features/workspace/hooks/use-workspaces";
@@ -17,6 +16,8 @@ import { UserList } from "@/components/workspace/settings/user-list";
 import { Role } from "@/utils/permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, UserPlus, Copy, Check } from "lucide-react";
+import { TeamManagement } from "@/components/pm/team-management";
+
 
 function UserManagementSection({ workspaceId }: { workspaceId: string }) {
   const { permissions, currentRole } = useWorkspace();
@@ -88,7 +89,7 @@ function UserManagementSection({ workspaceId }: { workspaceId: string }) {
   };
 
   const totalMembers = members.length;
-  const maxMembers = 6;
+  const maxMembers = 25; // PM workspaces can have up to 25 members
 
   return (
     <div className="space-y-6">
@@ -292,6 +293,18 @@ export default function WorkspaceSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {selectedWorkspace && <UserManagementSection workspaceId={selectedWorkspace._id} />}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Management</CardTitle>
+                <CardDescription>
+                  Create and manage teams for your project. Maximum 2 teams allowed.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {selectedWorkspace && <TeamManagement workspaceId={selectedWorkspace._id} />}
               </CardContent>
             </Card>
 

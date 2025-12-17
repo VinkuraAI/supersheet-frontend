@@ -43,13 +43,16 @@ export function PMTopNav({ currentView, onViewChange }: PMTopNavProps) {
             {item.hasDropdown && <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" />}
           </button>
         ))}
-        
+
         <div className="h-4 w-px bg-slate-300 mx-2" />
-        
+
         <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm">
           Automation
         </button>
-        <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm">
+        <button
+          onClick={() => onViewChange('settings')}
+          className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm"
+        >
           Project Settings
         </button>
       </div>
