@@ -58,71 +58,105 @@ export function IssueList({ isArchived = false, onCreate }: { isArchived?: boole
     }
   };
 
+  const itemsPerPage = 20;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(issues.length / itemsPerPage);
+
+  const paginatedIssues = issues.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="bg-white rounded-md shadow-sm border border-slate-200 overflow-hidden">
       {!isArchived && (
         <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-            <h3 className="font-medium text-slate-800">Issues</h3>
-             {onCreate && (
-              <Button onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Report Issue
-              </Button>
-            )}
+          <h3 className="font-medium text-slate-800">Issues</h3>
+          {onCreate && (
+            <Button onClick={onCreate} className="bg-blue-600 hover:bg-blue-700 text-white">
+              Report Issue
+            </Button>
+          )}
         </div>
       )}
-      <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Creator</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Title</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Description</th>
-             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-            {!isArchived && <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-slate-200">
-          {issues.map((issue) => (
-            <tr key={issue._id}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{issue.creatorId?.name || "Unknown"}</td>
-              <td className="px-6 py-4 text-sm text-gray-500">{issue.title}</td>
-              <td className="px-6 py-4 text-sm text-gray-500">{issue.description}</td>
-              <td className="px-6 py-4 text-sm text-gray-500">{format(new Date(issue.createdAt), "PPP")}</td>
-              <td className="px-6 py-4">
-                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                  ${issue.status === "SOLVED" ? "bg-green-100 text-green-800" :
-                    issue.status === "UNDER_PROGRESS" ? "bg-blue-100 text-blue-800" :
-                    issue.status === "NOT_FOUND" ? "bg-red-100 text-red-800" :
-                    "bg-gray-100 text-gray-800"}`}
-                >
-                  {issue.status.replace("_", " ")}
-                </span>
-              </td>
-              {!isArchived && (
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                   <select
-                    className="text-xs border-slate-200 rounded-sm p-1"
-                    value={issue.status}
-                    onChange={(e) => handleStatusChange(issue._id, e.target.value)}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Creator</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Title</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+              {!isArchived && <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-200">
+            {paginatedIssues.map((issue) => (
+              <tr key={issue._id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{issue.creatorId?.name || "Unknown"}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{issue.title}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{issue.description}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{format(new Date(issue.createdAt), "PPP")}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                    ${issue.status === "SOLVED" ? "bg-green-100 text-green-800" :
+                      issue.status === "UNDER_PROGRESS" ? "bg-blue-100 text-blue-800" :
+                        issue.status === "NOT_FOUND" ? "bg-red-100 text-red-800" :
+                          "bg-gray-100 text-gray-800"}`}
                   >
-                    <option value="UNDER_PROGRESS">In Progress</option>
-                    <option value="SOLVED">Solved</option>
-                    <option value="NOT_FOUND">Not Found</option>
-                    <option value="ARCHIVED">Archive</option>
-                  </select>
+                    {issue.status.replace("_", " ")}
+                  </span>
                 </td>
-              )}
-            </tr>
-          ))}
-          {issues.length === 0 && (
-             <tr>
-              <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500">
-                No {isArchived ? "archived " : ""}issues found.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+                {!isArchived && (
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <select
+                      className="text-xs border-slate-200 rounded-sm p-1"
+                      value={issue.status}
+                      onChange={(e) => handleStatusChange(issue._id, e.target.value)}
+                    >
+                      <option value="UNDER_PROGRESS">In Progress</option>
+                      <option value="SOLVED">Solved</option>
+                      <option value="NOT_FOUND">Not Found</option>
+                      <option value="ARCHIVED">Archive</option>
+                    </select>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {issues.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500">
+                  No {isArchived ? "archived " : ""}issues found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end px-6 py-4 border-t border-slate-200 gap-2">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="text-xs text-slate-500">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

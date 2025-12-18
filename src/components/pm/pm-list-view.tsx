@@ -37,7 +37,7 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
   const { data: teams } = useTeams(workspaceId);
 
   // Check if user is a leader of any team
-  const isTeamLeader = teams?.some((team: any) => team.leader === user?.id || team.leader?._id === user?.id);
+  const isTeamLeader = teams?.some((team: any) => team.leader === (user as any)?.id || team.leader?._id === (user as any)?.id || team.leader === (user as any)?._id || team.leader?._id === (user as any)?._id);
 
   // Permission check
   const canCreate = currentRole === 'owner' || currentRole === 'admin' || currentRole === 'editor' || isTeamLeader;
@@ -61,6 +61,20 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
 
     return matchesSearch && matchesFilter;
   });
+
+  // Pagination Logic
+  const itemsPerPage = 20;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+
+  const paginatedTasks = filteredTasks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, currentFilter]);
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -111,27 +125,27 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
       </div>
 
       {/* List Header */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-slate-300">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-slate-50 sticky top-0 z-10">
+          <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-12">Type</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-24">Key</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Summary</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-32">Status</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-40">Assignee</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-32">Due Date</th>
-              <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-32">Priority</th>
+              <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-12 text-center">Type</th>
+              <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-24 whitespace-nowrap">Key</th>
+              <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 whitespace-nowrap">Summary</th>
+              <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-32 whitespace-nowrap">Status</th>
+              <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-40 whitespace-nowrap">Assignee</th>
+              <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-32 whitespace-nowrap">Due Date</th>
+              <th className="px-6 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-32 whitespace-nowrap">Priority</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 bg-white">
             {/* Create Row - Only if allowed */}
             {canCreate && (
-              <tr onClick={onCreateClick} className="hover:bg-slate-50 group cursor-pointer">
+              <tr onClick={onCreateClick} className="hover:bg-blue-50/50 group cursor-pointer transition-colors border-l-4 border-l-transparent hover:border-l-blue-500">
                 <td className="px-6 py-3" colSpan={7}>
-                  <div className="flex items-center gap-2 text-slate-500 group-hover:text-blue-600">
+                  <div className="flex items-center gap-2 text-slate-400 group-hover:text-blue-600 transition-colors pl-2">
                     <Plus className="w-4 h-4" />
-                    <span className="text-sm font-medium">Create</span>
+                    <span className="text-sm font-medium">Create new task...</span>
                   </div>
                 </td>
               </tr>
@@ -143,29 +157,29 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
                 <ContextMenu key={task._id || task.id}>
                   <ContextMenuTrigger asChild>
                     <tr
-                      className="hover:bg-slate-50 group transition-colors cursor-pointer"
+                      className="hover:bg-slate-50/80 group transition-all cursor-pointer border-l-2 border-l-transparent hover:border-l-blue-400"
                       onClick={() => onEditTask(task)}
                     >
-                      <td className="px-6 py-3">
+                      <td className="px-6 py-3 text-center">
                         <div className={cn(
-                          "w-4 h-4 rounded-sm flex items-center justify-center",
+                          "w-5 h-5 rounded-[4px] flex items-center justify-center mx-auto shadow-sm",
                           task.data?.issueType === "Bug" ? "bg-red-500" :
                             task.data?.issueType === "Story" ? "bg-green-500" :
                               task.data?.issueType === "Epic" ? "bg-purple-500" :
                                 "bg-blue-500"
                         )}>
-                          <div className="w-2 h-2 bg-white rounded-full" />
+                          <div className="w-1.5 h-1.5 bg-white rounded-full opacity-90" />
                         </div>
                       </td>
-                      <td className="px-6 py-3">
-                        <span className="text-sm text-slate-500 font-medium hover:underline">{task._id.slice(-4)}</span>
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <span className="text-sm text-slate-500 font-medium hover:text-blue-600 hover:underline font-mono">{task._id.slice(-4)}</span>
                       </td>
-                      <td className="px-6 py-3">
-                        <span className="text-sm text-slate-700 font-medium group-hover:text-blue-600">{task.data?.summary || "Untitled"}</span>
+                      <td className="px-6 py-3 max-w-[400px]">
+                        <span className="text-sm text-slate-700 font-medium group-hover:text-blue-700 line-clamp-1">{task.data?.summary || "Untitled"}</span>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-6 py-3 whitespace-nowrap">
                         <span className={cn(
-                          "text-xs font-bold px-2 py-0.5 rounded uppercase",
+                          "text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide",
                           task.data?.status === "todo" ? "bg-slate-100 text-slate-600" :
                             task.data?.status === "in_progress" ? "bg-blue-100 text-blue-700" :
                               task.data?.status === "done" ? "bg-emerald-100 text-emerald-700" :
@@ -173,25 +187,27 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
                                   task.data?.status === "blocked" ? "bg-red-100 text-red-700" :
                                     "bg-slate-100 text-slate-600"
                         )}>
-                          {task.data?.status || "todo"}
+                          {task.data?.status?.replace('_', ' ') || "todo"}
                         </span>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-6 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           {(!task.data?.assignee || task.data?.assignee === "Unassigned") ? (
                             <UserCircle2 className="w-6 h-6 text-slate-300" />
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[0.65rem] font-bold">
+                            <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[0.65rem] font-bold shadow-sm border border-emerald-200">
                               {task.data.assignee.slice(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-sm text-slate-600">{task.data?.assignee || "Unassigned"}</span>
+                          <span className="text-sm text-slate-600 truncate max-w-[100px]">{task.data?.assignee || "Unassigned"}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-3">
-                        <span className="text-sm text-slate-500">{task.data?.dueDate ? new Date(task.data.dueDate).toLocaleDateString() : "None"}</span>
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <span className={cn("text-sm", task.data?.dueDate && new Date(task.data.dueDate) < new Date() ? "text-red-600 font-medium" : "text-slate-500")}>
+                          {task.data?.dueDate ? new Date(task.data.dueDate).toLocaleDateString() : "-"}
+                        </span>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-6 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           {task.data?.priority === "Highest" ? <ChevronDown className="w-4 h-4 text-red-500 rotate-180" /> :
                             task.data?.priority === "High" ? <ChevronDown className="w-4 h-4 text-orange-500 rotate-180" /> :
@@ -218,8 +234,8 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-500">
-                  {tasks.length === 0 ? "No tasks found." : "No tasks match your filter."}
+                <td colSpan={7} className="text-center py-6 text-slate-500">
+                  <p className="text-sm font-medium">{tasks.length === 0 ? "No tasks found." : "No tasks match your filter."}</p>
                 </td>
               </tr>
             )}
@@ -228,18 +244,15 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
 
         {/* Empty State (if no tasks in workspace at all) */}
         {tasks.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-48 h-32 bg-slate-100 rounded-lg mb-6 flex items-center justify-center">
-              <div className="text-slate-300">Illustration</div>
-            </div>
+          <div className="flex flex-col items-center justify-center py-8 animate-in fade-in zoom-in duration-500">
             <h3 className="text-lg font-semibold text-slate-800 mb-2">View your work in a list</h3>
-            <p className="text-slate-500 mb-6 max-w-sm text-center">
+            <p className="text-slate-500 mb-3 max-w-sm text-center">
               Plan, track and manage your project in a spreadsheet-like view.
             </p>
             {canCreate ? (
               <button
                 onClick={onCreateClick}
-                className="px-4 py-2 bg-blue-700 text-white font-medium rounded-sm hover:bg-blue-800 transition-colors"
+                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
               >
                 Create an item
               </button>

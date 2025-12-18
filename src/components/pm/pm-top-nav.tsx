@@ -22,7 +22,6 @@ const navItems = [
   { id: "issues", label: "Issues" },
   { id: "reports", label: "Reports" },
   { id: "archived", label: "Archived Issues" },
-  { id: "shortcuts", label: "Shortcuts", hasDropdown: true },
 ];
 
 export function PMTopNav({ currentView, onViewChange }: PMTopNavProps) {
@@ -36,32 +35,28 @@ export function PMTopNav({ currentView, onViewChange }: PMTopNavProps) {
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => !item.hasDropdown && onViewChange(item.id)}
+            onClick={() => onViewChange(item.id)}
             className={cn(
               "px-3 py-1.5 text-sm font-medium rounded-sm transition-colors flex items-center gap-1",
               currentView === item.id
-                ? "text-blue-700 bg-blue-50 relative after:absolute after:bottom-[-13px] after:left-0 after:right-0 after:h-[2px] after:bg-blue-700"
+                ? "text-blue-700 bg-blue-50 relative after:absolute after:bottom-[-13px] after:left-0 after:right-0 after:h-[2px] after:bg-blue-700 hover:bg-blue-100" // Added hover
                 : "text-slate-600 hover:bg-slate-100"
             )}
           >
             {item.label}
-            {item.hasDropdown && <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" />}
           </button>
         ))}
 
-        <div className="h-4 w-px bg-slate-300 mx-2" />
-
-        <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm">
-          Automation
-        </button>
-
         {canViewSettings && (
-          <button
-            onClick={() => onViewChange('settings')}
-            className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm"
-          >
-            Project Settings
-          </button>
+          <>
+            <div className="h-4 w-px bg-slate-300 mx-2" />
+            <button
+              onClick={() => onViewChange('settings')}
+              className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm"
+            >
+              Project Settings
+            </button>
+          </>
         )}
       </div>
     </div>

@@ -217,6 +217,7 @@ export default function PMWorkspacePage() {
                 tasks={tasks}
                 onCreateClick={handleCreateClick}
                 onEditTask={handleEditTask}
+                workspaceId={params.id as string}
               />
             )}
             {currentView === 'approvals' && <RequestList onCreate={() => setIsRequestModalOpen(true)} />}
