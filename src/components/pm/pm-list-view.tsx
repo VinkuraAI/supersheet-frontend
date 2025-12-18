@@ -24,14 +24,43 @@ interface PMListViewProps {
   onReportIssue: (task: any) => void;
 }
 
+import { useWorkspace } from "@/lib/workspace-context";
+import { useUser } from "@/lib/user-context";
+
+import { useTeams } from "@/features/workspace/hooks/use-teams";
+
 export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDeleteTask, onRequest, onReportIssue }: PMListViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentFilter, setCurrentFilter] = useState<"all" | "assigned_to_me">("all");
+  const { currentRole } = useWorkspace();
+  const { user } = useUser();
+  const { data: teams } = useTeams(workspaceId);
 
-  // Removed LocalStorage logic as we now receive tasks via props
+  // Check if user is a leader of any team
+  const isTeamLeader = teams?.some((team: any) => team.leader === user?.id || team.leader?._id === user?.id);
 
-  const filteredTasks = tasks.filter(t =>
-    (t.data?.summary || t.data?.content || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Permission check
+  const canCreate = currentRole === 'owner' || currentRole === 'admin' || currentRole === 'editor' || isTeamLeader;
+
+  // Filter tasks logic
+  const filteredTasks = tasks.filter(t => {
+    // 1. Search Query
+    const matchesSearch = (t.data?.summary || t.data?.content || "").toLowerCase().includes(searchQuery.toLowerCase());
+
+    // 2. Assigned to Me Filter
+    let matchesFilter = true;
+    if (currentFilter === "assigned_to_me" && user) {
+      // Check "assignee" (single) or "assignedTo" (multiple)
+      const assigneeName = t.data?.assignee;
+      const assignedToArray = t.data?.assignedTo || [];
+      // Match against user name (since we store names in assignee currently, improving to ID would be better but following existing pattern)
+      const userName = (user as any).name || "";
+
+      matchesFilter = assigneeName === userName || assignedToArray.includes(userName);
+    }
+
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -51,11 +80,27 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
           <div className="flex items-center gap-2">
             <div className="flex -space-x-2">
               <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold border-2 border-white">FO</div>
-              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 border-2 border-white hover:bg-slate-300 cursor-pointer" onClick={onCreateClick}>
-                <Plus className="w-4 h-4" />
-              </div>
+              {canCreate && (
+                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 border-2 border-white hover:bg-slate-300 cursor-pointer" onClick={onCreateClick}>
+                  <Plus className="w-4 h-4" />
+                </div>
+              )}
             </div>
-            <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm">Filter</button>
+            {/* Filter Toggle */}
+            <div className="flex bg-slate-100 rounded-sm p-0.5">
+              <button
+                onClick={() => setCurrentFilter("all")}
+                className={cn("px-3 py-1 text-xs font-medium rounded-sm transition-all", currentFilter === "all" ? "bg-white shadow text-blue-700" : "text-slate-500 hover:text-slate-700")}
+              >
+                All Tasks
+              </button>
+              <button
+                onClick={() => setCurrentFilter("assigned_to_me")}
+                className={cn("px-3 py-1 text-xs font-medium rounded-sm transition-all", currentFilter === "assigned_to_me" ? "bg-white shadow text-blue-700" : "text-slate-500 hover:text-slate-700")}
+              >
+                Assigned to Me
+              </button>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -80,98 +125,108 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {/* Create Row */}
-            <tr onClick={onCreateClick} className="hover:bg-slate-50 group cursor-pointer">
-              <td className="px-6 py-3" colSpan={7}>
-                <div className="flex items-center gap-2 text-slate-500 group-hover:text-blue-600">
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm font-medium">Create</span>
-                </div>
-              </td>
-            </tr>
+            {/* Create Row - Only if allowed */}
+            {canCreate && (
+              <tr onClick={onCreateClick} className="hover:bg-slate-50 group cursor-pointer">
+                <td className="px-6 py-3" colSpan={7}>
+                  <div className="flex items-center gap-2 text-slate-500 group-hover:text-blue-600">
+                    <Plus className="w-4 h-4" />
+                    <span className="text-sm font-medium">Create</span>
+                  </div>
+                </td>
+              </tr>
+            )}
 
             {/* Task Rows */}
-            {filteredTasks.map((task) => (
-              <ContextMenu key={task._id || task.id}>
-                <ContextMenuTrigger asChild>
-                  <tr
-                    className="hover:bg-slate-50 group transition-colors cursor-pointer"
-                    onClick={() => onEditTask(task)}
-                  >
-                    <td className="px-6 py-3">
-                      <div className={cn(
-                        "w-4 h-4 rounded-sm flex items-center justify-center",
-                        task.data?.issueType === "Bug" ? "bg-red-500" :
-                          task.data?.issueType === "Story" ? "bg-green-500" :
-                            task.data?.issueType === "Epic" ? "bg-purple-500" :
-                              "bg-blue-500"
-                      )}>
-                        <div className="w-2 h-2 bg-white rounded-full" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className="text-sm text-slate-500 font-medium hover:underline">{task._id.slice(-4)}</span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className="text-sm text-slate-700 font-medium group-hover:text-blue-600">{task.data?.summary || "Untitled"}</span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className={cn(
-                        "text-xs font-bold px-2 py-0.5 rounded uppercase",
-                        task.data?.status === "todo" ? "bg-slate-100 text-slate-600" :
-                          task.data?.status === "in_progress" ? "bg-blue-100 text-blue-700" :
-                            task.data?.status === "done" ? "bg-emerald-100 text-emerald-700" :
-                              task.data?.status === "in_review" ? "bg-purple-100 text-purple-700" :
-                                task.data?.status === "blocked" ? "bg-red-100 text-red-700" :
-                                  "bg-slate-100 text-slate-600"
-                      )}>
-                        {task.data?.status || "todo"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex items-center gap-2">
-                        {(!task.data?.assignee || task.data?.assignee === "Unassigned") ? (
-                          <UserCircle2 className="w-6 h-6 text-slate-300" />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[0.65rem] font-bold">
-                            {task.data.assignee.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <span className="text-sm text-slate-600">{task.data?.assignee || "Unassigned"}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className="text-sm text-slate-500">{task.data?.dueDate ? new Date(task.data.dueDate).toLocaleDateString() : "None"}</span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex items-center gap-2">
-                        {task.data?.priority === "Highest" ? <ChevronDown className="w-4 h-4 text-red-500 rotate-180" /> :
-                          task.data?.priority === "High" ? <ChevronDown className="w-4 h-4 text-orange-500 rotate-180" /> :
-                            task.data?.priority === "Medium" ? <div className="w-4 h-4 flex items-center justify-center"><div className="w-3 h-0.5 bg-yellow-500" /></div> :
-                              <ChevronDown className="w-4 h-4 text-blue-500" />
-                        }
-                        <span className="text-sm text-slate-600">{task.data?.priority || "Medium"}</span>
-                      </div>
-                    </td>
-                  </tr>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem onClick={() => onRequest(task)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Request
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => onReportIssue(task)}>
-                    <AlertCircle className="mr-2 h-4 w-4" />
-                    Report Issue
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-            ))}
+            {filteredTasks.length > 0 ? (
+              filteredTasks.map((task) => (
+                <ContextMenu key={task._id || task.id}>
+                  <ContextMenuTrigger asChild>
+                    <tr
+                      className="hover:bg-slate-50 group transition-colors cursor-pointer"
+                      onClick={() => onEditTask(task)}
+                    >
+                      <td className="px-6 py-3">
+                        <div className={cn(
+                          "w-4 h-4 rounded-sm flex items-center justify-center",
+                          task.data?.issueType === "Bug" ? "bg-red-500" :
+                            task.data?.issueType === "Story" ? "bg-green-500" :
+                              task.data?.issueType === "Epic" ? "bg-purple-500" :
+                                "bg-blue-500"
+                        )}>
+                          <div className="w-2 h-2 bg-white rounded-full" />
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className="text-sm text-slate-500 font-medium hover:underline">{task._id.slice(-4)}</span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className="text-sm text-slate-700 font-medium group-hover:text-blue-600">{task.data?.summary || "Untitled"}</span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className={cn(
+                          "text-xs font-bold px-2 py-0.5 rounded uppercase",
+                          task.data?.status === "todo" ? "bg-slate-100 text-slate-600" :
+                            task.data?.status === "in_progress" ? "bg-blue-100 text-blue-700" :
+                              task.data?.status === "done" ? "bg-emerald-100 text-emerald-700" :
+                                task.data?.status === "in_review" ? "bg-purple-100 text-purple-700" :
+                                  task.data?.status === "blocked" ? "bg-red-100 text-red-700" :
+                                    "bg-slate-100 text-slate-600"
+                        )}>
+                          {task.data?.status || "todo"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          {(!task.data?.assignee || task.data?.assignee === "Unassigned") ? (
+                            <UserCircle2 className="w-6 h-6 text-slate-300" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[0.65rem] font-bold">
+                              {task.data.assignee.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm text-slate-600">{task.data?.assignee || "Unassigned"}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className="text-sm text-slate-500">{task.data?.dueDate ? new Date(task.data.dueDate).toLocaleDateString() : "None"}</span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          {task.data?.priority === "Highest" ? <ChevronDown className="w-4 h-4 text-red-500 rotate-180" /> :
+                            task.data?.priority === "High" ? <ChevronDown className="w-4 h-4 text-orange-500 rotate-180" /> :
+                              task.data?.priority === "Medium" ? <div className="w-4 h-4 flex items-center justify-center"><div className="w-3 h-0.5 bg-yellow-500" /></div> :
+                                <ChevronDown className="w-4 h-4 text-blue-500" />
+                          }
+                          <span className="text-sm text-slate-600">{task.data?.priority || "Medium"}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => onRequest(task)}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Request
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => onReportIssue(task)}>
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      Report Issue
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={7} className="text-center py-12 text-slate-500">
+                  {tasks.length === 0 ? "No tasks found." : "No tasks match your filter."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 
-        {/* Empty State (if no tasks) */}
+        {/* Empty State (if no tasks in workspace at all) */}
         {tasks.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-48 h-32 bg-slate-100 rounded-lg mb-6 flex items-center justify-center">
@@ -181,12 +236,18 @@ export function PMListView({ workspaceId, onCreateClick, onEditTask, tasks, onDe
             <p className="text-slate-500 mb-6 max-w-sm text-center">
               Plan, track and manage your project in a spreadsheet-like view.
             </p>
-            <button
-              onClick={onCreateClick}
-              className="px-4 py-2 bg-blue-700 text-white font-medium rounded-sm hover:bg-blue-800 transition-colors"
-            >
-              Create an item
-            </button>
+            {canCreate ? (
+              <button
+                onClick={onCreateClick}
+                className="px-4 py-2 bg-blue-700 text-white font-medium rounded-sm hover:bg-blue-800 transition-colors"
+              >
+                Create an item
+              </button>
+            ) : (
+              <div className="p-3 bg-blue-50 text-blue-800 rounded-md text-sm border border-blue-200">
+                Team leader will assign tasks to you.
+              </div>
+            )}
           </div>
         )}
       </div>

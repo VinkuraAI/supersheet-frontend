@@ -10,10 +10,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { TeamManagement } from "@/components/pm/team-management";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function PMSettingsView({ workspaceId }: { workspaceId: string }) {
     const router = useRouter();
     const { selectedWorkspace, permissions } = useWorkspace();
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [newName, setNewName] = useState(selectedWorkspace?.name || "");
     const [isSaving, setIsSaving] = useState(false);
     const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
@@ -33,13 +44,15 @@ export function PMSettingsView({ workspaceId }: { workspaceId: string }) {
     };
 
     const handleDelete = async () => {
-        if (!selectedWorkspace || !confirm("Are you sure? This action cannot be undone.")) return;
+        if (!selectedWorkspace) return;
         try {
             await deleteWorkspace(selectedWorkspace._id);
             toast.success("Workspace deleted successfully");
             router.push("/dashboard");
         } catch (error: any) {
             toast.error("Failed to delete workspace");
+        } finally {
+            setShowDeleteDialog(false);
         }
     };
 
@@ -88,20 +101,39 @@ export function PMSettingsView({ workspaceId }: { workspaceId: string }) {
                 </CardContent>
             </Card>
 
-            <Card className="border-destructive/50">
-                <CardHeader>
-                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                    <CardDescription>Irreversible actions for your workspace.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Deleting a workspace will permanently remove all data, documents, and member associations. This action cannot be undone.
-                    </p>
-                </CardContent>
-                <CardFooter className="border-t border-destructive/10 px-6 py-4 bg-destructive/5">
-                    <Button variant="destructive" onClick={handleDelete}>Delete Workspace</Button>
-                </CardFooter>
-            </Card>
+            {permissions.canDeleteWorkspace && (
+                <Card className="border-destructive/50">
+                    <CardHeader>
+                        <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                        <CardDescription>Irreversible actions for your workspace.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                            Deleting a workspace will permanently remove all data, documents, and member associations. This action cannot be undone.
+                        </p>
+                    </CardContent>
+                    <CardFooter className="border-t border-destructive/10 px-6 py-4 bg-destructive/5">
+                        <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>Delete Workspace</Button>
+                    </CardFooter>
+                </Card>
+            )}
+
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Workspace?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to permanently delete this workspace? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

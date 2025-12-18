@@ -24,8 +24,24 @@ interface KanbanBoardProps {
   onDeleteTask?: (taskId: string) => void;
 }
 
+import { useWorkspace } from "@/lib/workspace-context";
+
+// ... previous imports ...
+
+import { useTeams } from "@/features/workspace/hooks/use-teams";
+import { useUser } from "@/lib/user-context";
+
 export function KanbanBoard({ workspaceId, onCreateClick, onEditTask, tasks, onTaskMove, onDeleteTask }: KanbanBoardProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { selectedWorkspace, currentRole } = useWorkspace();
+  const { user } = useUser();
+  const { data: teams } = useTeams(workspaceId);
+
+  // Check if user is a leader of any team in this workspace
+  const isTeamLeader = teams?.some((team: any) => team.leader === user?.id || team.leader?._id === user?.id);
+
+  // Permission check: Owner, Admin, Editor OR Team Leader can create.
+  const canCreate = currentRole === 'owner' || currentRole === 'admin' || currentRole === 'editor' || isTeamLeader;
 
   const onDragEnd = (result: any) => {
     if (!result.destination) return;
@@ -67,9 +83,11 @@ export function KanbanBoard({ workspaceId, onCreateClick, onEditTask, tasks, onT
           </div>
           <div className="flex -space-x-2">
             <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold border-2 border-white">FO</div>
-            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 border-2 border-white hover:bg-slate-300 cursor-pointer" onClick={onCreateClick}>
-              <Plus className="w-4 h-4" />
-            </div>
+            {canCreate && (
+              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 border-2 border-white hover:bg-slate-300 cursor-pointer" onClick={onCreateClick}>
+                <Plus className="w-4 h-4" />
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -86,12 +104,18 @@ export function KanbanBoard({ workspaceId, onCreateClick, onEditTask, tasks, onT
             </div>
             <h2 className="text-xl font-semibold text-slate-800 mb-2">Visualize your work with a board</h2>
             <p className="text-slate-600 mb-6 max-w-md">Track, organize and prioritize your team&apos;s work. Get started by creating an item for your team.</p>
-            <button
-              onClick={onCreateClick}
-              className="px-4 py-2 bg-blue-700 text-white font-medium rounded-sm hover:bg-blue-800 transition-colors"
-            >
-              Create an item
-            </button>
+            {canCreate ? (
+              <button
+                onClick={onCreateClick}
+                className="px-4 py-2 bg-blue-700 text-white font-medium rounded-sm hover:bg-blue-800 transition-colors"
+              >
+                Create an item
+              </button>
+            ) : (
+              <div className="p-3 bg-blue-50 text-blue-800 rounded-md text-sm border border-blue-200">
+                Team leader will assign tasks to you.
+              </div>
+            )}
           </div>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
@@ -106,9 +130,11 @@ export function KanbanBoard({ workspaceId, onCreateClick, onEditTask, tasks, onT
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={onCreateClick} className="p-1 hover:bg-slate-200 rounded-sm text-slate-400 hover:text-slate-600">
-                        <Plus className="w-4 h-4" />
-                      </button>
+                      {canCreate && (
+                        <button onClick={onCreateClick} className="p-1 hover:bg-slate-200 rounded-sm text-slate-400 hover:text-slate-600">
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      )}
                       <MoreHorizontal className="w-4 h-4 text-slate-400 cursor-pointer hover:text-slate-600" />
                     </div>
                   </div>
@@ -140,15 +166,17 @@ export function KanbanBoard({ workspaceId, onCreateClick, onEditTask, tasks, onT
                                 >
                                   <div className="flex justify-between items-start mb-2">
                                     <p className="text-sm text-slate-800 line-clamp-2">{task.data?.summary || task.data?.content}</p>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEditTask(task);
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded transition-opacity absolute top-2 right-2"
-                                    >
-                                      <Pencil className="w-3 h-3 text-slate-500" />
-                                    </button>
+                                    {canCreate && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onEditTask(task);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded transition-opacity absolute top-2 right-2"
+                                      >
+                                        <Pencil className="w-3 h-3 text-slate-500" />
+                                      </button>
+                                    )}
                                   </div>
 
                                   <div className="flex items-center justify-between mt-3">
@@ -183,13 +211,15 @@ export function KanbanBoard({ workspaceId, onCreateClick, onEditTask, tasks, onT
                           ))}
                         {provided.placeholder}
 
-                        <button
-                          onClick={onCreateClick}
-                          className="w-full py-2 flex items-center gap-2 text-slate-500 hover:bg-slate-200 rounded-sm text-sm transition-colors px-2"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Create
-                        </button>
+                        {canCreate && (
+                          <button
+                            onClick={onCreateClick}
+                            className="w-full py-2 flex items-center gap-2 text-slate-500 hover:bg-slate-200 rounded-sm text-sm transition-colors px-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Create
+                          </button>
+                        )}
                       </div>
                     )}
                   </Droppable>

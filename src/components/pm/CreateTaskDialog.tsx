@@ -40,6 +40,7 @@ import { useUser } from "@/lib/user-context";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/utils/api.client";
 import { useTeams } from "@/features/workspace/hooks/use-teams"; // Added hook
+import { useWorkspaceMembers } from "@/features/workspace/hooks/use-workspaces";
 
 const TASK_TYPE_COLORS = {
     Task: { bg: "bg-blue-600", text: "text-white", border: "border-blue-700", color: "#2563eb", lightBg: "bg-blue-50" },
@@ -102,6 +103,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
 
     // Fetch teams for the selected project
     const { data: teams = [], isLoading: isTeamsLoading } = useTeams(selectedProjectId);
+    const { data: workspaceMembers = [] } = useWorkspaceMembers(selectedProjectId);
 
     // Derived state for assigns
     const [availableAssignees, setAvailableAssignees] = useState<any[]>([]);
@@ -116,20 +118,10 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                 setAvailableAssignees([]);
             }
         } else {
-            // Fallback to all workspace members? 
-            // We don't have all workspace members loaded in this dialog easily without a hook.
-            // But 'Command' loop used 'workspaces' before? No, it used 'user' name.
-            // The original code mocked assignee list or used just 'user'.
-            // We can check if we have a hook for members.
-            // For now, if no team selected, we might restrict or allow free text if legacy.
-            // Original code:
-            // - Assignee: Automatic, Unassigned, Current User.
-            // - Assigned To (Multiple): Me, Team Member 1, Team Member 2 (Mocked?).
-
-            // I should try to use 'useWorkspaceMembers' if I want real users.
-            // But I'll stick to 'teams' members if team selected.
+            // Fallback to all workspace members
+            setAvailableAssignees(workspaceMembers || []);
         }
-    }, [selectedTeamId, teams]);
+    }, [selectedTeamId, teams, workspaceMembers]);
 
     // Permission Check
     const canCreateTask = () => {
@@ -396,7 +388,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">Team</label>
                                 <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-                                    <SelectTrigger className="h-11 bg-white">
+                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm focus:ring-2 focus:ring-blue-500/20 data-[placeholder]:text-slate-400">
                                         <SelectValue placeholder="Select Team (Optional)" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -416,7 +408,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">Task Type *</label>
                                 <Select value={issueType} onValueChange={setIssueType}>
-                                    <SelectTrigger className="h-11 bg-white">
+                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all">
                                         <div className="flex items-center gap-2">
                                             <div className={cn("w-3 h-3 rounded-full", TASK_TYPE_COLORS[issueType as keyof typeof TASK_TYPE_COLORS]?.bg)} />
                                             <SelectValue />
@@ -438,7 +430,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">Status *</label>
                                 <Select value={status} onValueChange={setStatus}>
-                                    <SelectTrigger className="h-11 bg-white">
+                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all">
                                         <div className="flex items-center gap-2">
                                             <div className={cn("w-3 h-3 rounded-full", STATUS_COLORS[status as keyof typeof STATUS_COLORS]?.bg)} />
                                             <SelectValue />
@@ -524,7 +516,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">Priority</label>
                                 <Select value={priority} onValueChange={setPriority}>
-                                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         {["Highest", "High", "Medium", "Low", "Lowest"].map(p => (
                                             <SelectItem key={p} value={p}>{p}</SelectItem>
@@ -539,14 +531,17 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">Assignee</label>
                                 <Select value={assignee} onValueChange={setAssignee}>
-                                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="automatic">Automatic</SelectItem>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
                                         <SelectItem value="current_user">{(user as any)?.name || "Me"}</SelectItem>
-                                        {selectedTeamId !== "unassigned" && availableAssignees.map((m: any) => (
-                                            <SelectItem key={m.user._id} value={m.user.name}>{m.user.name}</SelectItem>
-                                        ))}
+                                        {selectedTeamId !== "unassigned" && availableAssignees.map((m: any) => {
+                                            if (!m?.user) return null;
+                                            return (
+                                                <SelectItem key={m.user._id} value={m.user.name}>{m.user.name}</SelectItem>
+                                            );
+                                        })}
                                     </SelectContent>
                                 </Select>
                                 <Button variant="link" className="h-auto p-0 text-xs text-blue-600 justify-start" onClick={() => setAssignee("current_user")}>
@@ -558,7 +553,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                                 <label className="text-sm font-semibold text-slate-700">Assigned To (Multiple)</label>
                                 <Popover open={isAssignedToOpen} onOpenChange={setIsAssignedToOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full h-11 justify-between">
+                                        <Button variant="outline" className="w-full h-11 justify-between bg-white border-slate-200 shadow-sm hover:bg-slate-50 hover:border-blue-400 transition-all">
                                             <span className="truncate">{assignedTo.length ? `${assignedTo.length} selected` : "Select users..."}</span>
                                             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
@@ -571,16 +566,21 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                                                 <CommandGroup>
                                                     <CommandItem onSelect={() => toggleAssignedTo((user as any)?.name || "Me")}>
                                                         <Check className={cn("mr-2 h-4 w-4", assignedTo.includes((user as any)?.name || "Me") ? "opacity-100" : "opacity-0")} />
-                                                        {(user as any)?.name || "Me"}
+                                                        {(user as any)?.name || "Me"} (Current User)
                                                     </CommandItem>
-                                                    <CommandItem onSelect={() => toggleAssignedTo("Team Member 1")}>
-                                                        <Check className={cn("mr-2 h-4 w-4", assignedTo.includes("Team Member 1") ? "opacity-100" : "opacity-0")} />
-                                                        Team Member 1
-                                                    </CommandItem>
-                                                    <CommandItem onSelect={() => toggleAssignedTo("Team Member 2")}>
-                                                        <Check className={cn("mr-2 h-4 w-4", assignedTo.includes("Team Member 2") ? "opacity-100" : "opacity-0")} />
-                                                        Team Member 2
-                                                    </CommandItem>
+                                                    {availableAssignees.map((m: any) => {
+                                                        if (!m?.user) return null;
+                                                        const name = m.user.name || m.user.email || "Unknown";
+                                                        // Avoid duplicate "Me" if already shown
+                                                        if (name === ((user as any)?.name)) return null;
+
+                                                        return (
+                                                            <CommandItem key={m.user._id} onSelect={() => toggleAssignedTo(name)}>
+                                                                <Check className={cn("mr-2 h-4 w-4", assignedTo.includes(name) ? "opacity-100" : "opacity-0")} />
+                                                                {name}
+                                                            </CommandItem>
+                                                        );
+                                                    })}
                                                 </CommandGroup>
                                             </CommandList>
                                         </Command>
@@ -589,7 +589,7 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                                 {assignedTo.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-2">
                                         {assignedTo.map(u => (
-                                            <span key={u} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs flex items-center gap-1">
+                                            <span key={u} className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded-md text-xs flex items-center gap-1 font-medium shadow-sm">
                                                 {u}
                                                 <X className="w-3 h-3 cursor-pointer hover:text-blue-900" onClick={() => toggleAssignedTo(u)} />
                                             </span>

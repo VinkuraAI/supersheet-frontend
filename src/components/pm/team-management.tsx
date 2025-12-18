@@ -50,11 +50,16 @@ export function TeamManagement({ workspaceId, showSetupHint = false }: TeamManag
         setTeamName(team.name);
 
         // Convert team members to the form format
-        const formMembers: TeamMember[] = team.members.map((m: any) => ({
-            name: m.name || "",
-            email: m.email || "",
-            isLeader: team.leader?._id === m._id || team.leader === m._id
-        }));
+        const formMembers: TeamMember[] = team.members.map((m: any) => {
+            const memberId = m.user?._id || m._id; // Handle populated user or direct ref
+            const leaderId = team.leader?._id || team.leader;
+
+            return {
+                name: m.name || "",
+                email: m.email || "",
+                isLeader: leaderId === memberId || (leaderId && leaderId.toString() === memberId?.toString())
+            };
+        });
 
         setMembers(formMembers.length >= 2 ? formMembers : [
             ...formMembers,
@@ -73,11 +78,9 @@ export function TeamManagement({ workspaceId, showSetupHint = false }: TeamManag
     };
 
     const handleRemoveMember = (index: number) => {
-        if (members.length > 2) {
-            const newMembers = [...members];
-            newMembers.splice(index, 1);
-            setMembers(newMembers);
-        }
+        const newMembers = [...members];
+        newMembers.splice(index, 1);
+        setMembers(newMembers);
     };
 
     const updateMember = (index: number, field: keyof TeamMember, value: any) => {
@@ -214,8 +217,8 @@ export function TeamManagement({ workspaceId, showSetupHint = false }: TeamManag
                                             return (
                                                 <div key={m._id} className="relative group">
                                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${isPending
-                                                            ? "bg-amber-50 text-amber-700 border-amber-200 dashed-border"
-                                                            : "bg-slate-100 text-slate-700 border-slate-200"
+                                                        ? "bg-amber-50 text-amber-700 border-amber-200 dashed-border"
+                                                        : "bg-slate-100 text-slate-700 border-slate-200"
                                                         }`}>
                                                         {m.name}
                                                         {isPending && (
@@ -300,20 +303,18 @@ export function TeamManagement({ workspaceId, showSetupHint = false }: TeamManag
                                             <button
                                                 type="button"
                                                 onClick={() => updateMember(index, 'isLeader', !member.isLeader)}
-                                                className={`p-2 rounded-full transition-colors ${member.isLeader ? 'bg-yellow-100 text-yellow-600' : 'text-slate-400 hover:bg-slate-200'}`}
-                                                title="Toggle Team Leader"
+                                                className={`p-2 rounded-full transition-all ${member.isLeader ? 'bg-amber-100 text-amber-600 ring-2 ring-amber-500/20' : 'text-slate-400 hover:bg-slate-200'}`}
+                                                title={member.isLeader ? "Team Leader" : "Set as Team Leader"}
                                             >
-                                                <Crown className="w-5 h-5" />
+                                                <Crown className={`w-5 h-5 ${member.isLeader ? 'fill-current' : ''}`} />
                                             </button>
-                                            {members.length > 2 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveMember(index)}
-                                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full"
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveMember(index)}
+                                                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
+import { useWorkspace } from "@/lib/workspace-context";
 
 interface PMTopNavProps {
   currentView: string;
@@ -25,6 +26,10 @@ const navItems = [
 ];
 
 export function PMTopNav({ currentView, onViewChange }: PMTopNavProps) {
+  const { selectedWorkspace, currentRole } = useWorkspace();
+  // Check if user has permission to view settings (Owner/Admin)
+  const canViewSettings = currentRole === 'owner' || currentRole === 'admin';
+
   return (
     <div className="w-full bg-white border-b border-slate-200 px-4 flex items-center h-12 overflow-x-auto scrollbar-hide">
       <div className="flex items-center gap-1 min-w-max">
@@ -49,12 +54,15 @@ export function PMTopNav({ currentView, onViewChange }: PMTopNavProps) {
         <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm">
           Automation
         </button>
-        <button
-          onClick={() => onViewChange('settings')}
-          className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm"
-        >
-          Project Settings
-        </button>
+
+        {canViewSettings && (
+          <button
+            onClick={() => onViewChange('settings')}
+            className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm"
+          >
+            Project Settings
+          </button>
+        )}
       </div>
     </div>
   );

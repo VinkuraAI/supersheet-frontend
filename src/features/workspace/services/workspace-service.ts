@@ -16,6 +16,12 @@ export interface Workspace {
     userId: string;
     members?: Member[];
     mainFocus?: string;
+    role?: Role;
+    permissions?: {
+        canManageTasks?: boolean;
+        canManageWorkspace?: boolean;
+        [key: string]: any;
+    };
 }
 
 export interface WorkspaceDetails extends Workspace {

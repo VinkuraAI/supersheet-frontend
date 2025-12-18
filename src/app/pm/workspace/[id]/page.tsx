@@ -21,6 +21,7 @@ import { TopBar } from "@/components/service-desk/topbar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { PMSettingsView } from "@/components/pm/pm-settings-view";
+import { PMReportView } from "@/components/pm/pm-report-view";
 
 export default function PMWorkspacePage() {
   const params = useParams();
@@ -219,6 +220,7 @@ export default function PMWorkspacePage() {
               />
             )}
             {currentView === 'approvals' && <RequestList onCreate={() => setIsRequestModalOpen(true)} />}
+            {currentView === 'reports' && <PMReportView tasks={tasks} workspaceName={selectedWorkspace?.name || "Workspace"} />}
             {currentView === 'issues' && <IssueList onCreate={() => setIsIssueModalOpen(true)} />}
             {currentView === 'archived' && <IssueList isArchived />}
             {currentView === 'attachments' && <AttachmentsView />}
