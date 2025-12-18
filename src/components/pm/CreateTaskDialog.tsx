@@ -234,10 +234,11 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
         const newErrors: typeof errors = {};
         let hasError = false;
 
-        if (!summary.trim()) { newErrors.summary = true; hasError = true; }
+        // Required fields validation (everything except summary, labels, and attachments)
         if (!description.trim()) { newErrors.description = true; hasError = true; }
         if (!targetWorkspace) { newErrors.project = true; hasError = true; }
         if (!endDate) { newErrors.endDate = true; hasError = true; }
+        if (!startDate) { newErrors.startDate = true; hasError = true; }
         if (startDate && endDate && startDate > endDate) {
             newErrors.startDate = true; hasError = true;
             toast({ variant: "destructive", title: "Invalid Dates", description: "Start date cannot be after end date." });
@@ -337,64 +338,36 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                 <div className="flex-1 overflow-y-auto px-6 py-6">
                     <div className="space-y-6">
 
-                        {/* Project Name - Full Width Input */}
+                        {/* Project Name - Editable Input */}
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Project *</label>
-                            <Popover open={isProjectOpen} onOpenChange={setIsProjectOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className={cn(
-                                            "w-full h-12 justify-between text-left font-medium text-base bg-slate-50 hover:bg-slate-100",
-                                            errors.project && "border-red-500"
-                                        )}
-                                    >
-                                        {projectName || "Select project..."}
-                                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-full p-0" align="start">
-                                    <Command>
-                                        <CommandInput placeholder="Search projects..." />
-                                        <CommandList>
-                                            <CommandEmpty>No project found.</CommandEmpty>
-                                            <CommandGroup>
-                                                {workspaces.map((ws) => (
-                                                    <CommandItem
-                                                        key={ws._id}
-                                                        value={ws.name}
-                                                        onSelect={() => {
-                                                            setProjectName(ws.name);
-                                                            setSelectedProjectId(ws._id);
-                                                            setIsProjectOpen(false);
-                                                            setErrors(e => ({ ...e, project: false }));
-                                                        }}
-                                                    >
-                                                        <Check className={cn("mr-2 h-4 w-4", selectedProjectId === ws._id ? "opacity-100" : "opacity-0")} />
-                                                        {ws.name}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                            {errors.project && <p className="text-xs text-red-500">Project is required</p>}
+                            <label className="text-sm font-semibold text-slate-700">Project Name *</label>
+                            <Input
+                                value={projectName}
+                                onChange={(e) => {
+                                    setProjectName(e.target.value);
+                                    if (e.target.value.trim()) setErrors(er => ({ ...er, project: false }));
+                                }}
+                                className={cn(
+                                    "h-12 text-base font-medium bg-white border-slate-300 shadow-sm hover:border-blue-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all",
+                                    errors.project && "border-red-500"
+                                )}
+                                placeholder="Enter project name"
+                            />
+                            {errors.project && <p className="text-xs text-red-500">Project name is required</p>}
                         </div>
 
                         {/* Team Selection - New Field */}
                         {teams.length > 0 && (
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Team</label>
+                                <label className="text-sm font-semibold text-slate-700">Team *</label>
                                 <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm focus:ring-2 focus:ring-blue-500/20 data-[placeholder]:text-slate-400">
+                                    <SelectTrigger className="h-12 bg-white border-slate-300 shadow-sm hover:border-blue-400 hover:shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all data-[placeholder]:text-slate-400">
                                         <SelectValue placeholder="Select Team (Optional)" />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="unassigned">No Team</SelectItem>
+                                    <SelectContent className="border-slate-200 shadow-lg">
+                                        <SelectItem value="unassigned" className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">No Team</SelectItem>
                                         {teams.map((t: any) => (
-                                            <SelectItem key={t._id} value={t._id}>
+                                            <SelectItem key={t._id} value={t._id} className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">
                                                 {t.name}
                                             </SelectItem>
                                         ))}
@@ -408,17 +381,17 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">Task Type *</label>
                                 <Select value={issueType} onValueChange={setIssueType}>
-                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all">
-                                        <div className="flex items-center gap-2">
-                                            <div className={cn("w-3 h-3 rounded-full", TASK_TYPE_COLORS[issueType as keyof typeof TASK_TYPE_COLORS]?.bg)} />
+                                    <SelectTrigger className="h-12 bg-white border-slate-300 shadow-sm hover:border-blue-400 hover:shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={cn("w-3 h-3 rounded-full shadow-sm", TASK_TYPE_COLORS[issueType as keyof typeof TASK_TYPE_COLORS]?.bg)} />
                                             <SelectValue />
                                         </div>
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="border-slate-200 shadow-lg">
                                         {Object.keys(TASK_TYPE_COLORS).map((type) => (
-                                            <SelectItem key={type} value={type}>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={cn("w-3 h-3 rounded-full", TASK_TYPE_COLORS[type as keyof typeof TASK_TYPE_COLORS].bg)} />
+                                            <SelectItem key={type} value={type} className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className={cn("w-3 h-3 rounded-full shadow-sm", TASK_TYPE_COLORS[type as keyof typeof TASK_TYPE_COLORS].bg)} />
                                                     {type}
                                                 </div>
                                             </SelectItem>
@@ -430,17 +403,17 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">Status *</label>
                                 <Select value={status} onValueChange={setStatus}>
-                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all">
-                                        <div className="flex items-center gap-2">
-                                            <div className={cn("w-3 h-3 rounded-full", STATUS_COLORS[status as keyof typeof STATUS_COLORS]?.bg)} />
+                                    <SelectTrigger className="h-12 bg-white border-slate-300 shadow-sm hover:border-blue-400 hover:shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={cn("w-3 h-3 rounded-full shadow-sm", STATUS_COLORS[status as keyof typeof STATUS_COLORS]?.bg)} />
                                             <SelectValue />
                                         </div>
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="border-slate-200 shadow-lg">
                                         {Object.entries(STATUS_COLORS).map(([key, value]) => (
-                                            <SelectItem key={key} value={key}>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={cn("w-3 h-3 rounded-full", value.bg)} />
+                                            <SelectItem key={key} value={key} className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className={cn("w-3 h-3 rounded-full shadow-sm", value.bg)} />
                                                     {value.label}
                                                 </div>
                                             </SelectItem>
@@ -465,36 +438,35 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             {errors.description && <p className="text-xs text-red-500">Description is required</p>}
                         </div>
 
-                        {/* Summary (Second) */}
+                        {/* Summary (Optional) */}
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Summary *</label>
+                            <label className="text-sm font-semibold text-slate-700">Summary</label>
                             <Input
                                 value={summary}
                                 onChange={(e) => {
                                     setSummary(e.target.value);
-                                    if (e.target.value.trim()) setErrors(er => ({ ...er, summary: false }));
                                 }}
-                                placeholder="Brief summary of the task"
-                                className={cn("h-11 text-base font-medium", errors.summary && "border-red-500")}
+                                placeholder="Brief summary of the task (optional)"
+                                className="h-11 text-base font-medium"
                             />
-                            {errors.summary && <p className="text-xs text-red-500">Summary is required</p>}
                         </div>
 
                         {/* Dates & Priority Grid */}
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Start Date</label>
+                                <label className="text-sm font-semibold text-slate-700">Start Date *</label>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                                        <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal", !startDate && "text-muted-foreground", errors.startDate && "border-red-500")}>
                                             <Calendar className="mr-2 h-4 w-4" />
                                             {startDate ? format(startDate, "PPP") : "Pick date"}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
-                                        <CalendarComponent mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                                        <CalendarComponent mode="single" selected={startDate} onSelect={(d) => { setStartDate(d); setErrors(e => ({ ...e, startDate: false })); }} initialFocus />
                                     </PopoverContent>
                                 </Popover>
+                                {errors.startDate && <p className="text-xs text-red-500">Start date is required</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -514,12 +486,14 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Priority</label>
+                                <label className="text-sm font-semibold text-slate-700">Priority *</label>
                                 <Select value={priority} onValueChange={setPriority}>
-                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
+                                    <SelectTrigger className="h-12 bg-white border-slate-300 shadow-sm hover:border-blue-400 hover:shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="border-slate-200 shadow-lg">
                                         {["Highest", "High", "Medium", "Low", "Lowest"].map(p => (
-                                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                                            <SelectItem key={p} value={p} className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">{p}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -529,22 +503,24 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                         {/* People Assignment */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Assignee</label>
+                                <label className="text-sm font-semibold text-slate-700">Assignee *</label>
                                 <Select value={assignee} onValueChange={setAssignee}>
-                                    <SelectTrigger className="h-12 bg-white border-slate-200 shadow-sm hover:border-blue-400 transition-all"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="automatic">Automatic</SelectItem>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        <SelectItem value="current_user">{(user as any)?.name || "Me"}</SelectItem>
+                                    <SelectTrigger className="h-12 bg-white border-slate-300 shadow-sm hover:border-blue-400 hover:shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="border-slate-200 shadow-lg">
+                                        <SelectItem value="automatic" className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">Automatic</SelectItem>
+                                        <SelectItem value="unassigned" className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">Unassigned</SelectItem>
+                                        <SelectItem value="current_user" className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">{(user as any)?.name || "Me"}</SelectItem>
                                         {selectedTeamId !== "unassigned" && availableAssignees.map((m: any) => {
                                             if (!m?.user) return null;
                                             return (
-                                                <SelectItem key={m.user._id} value={m.user.name}>{m.user.name}</SelectItem>
+                                                <SelectItem key={m.user._id} value={m.user.name} className="hover:bg-slate-50 focus:bg-blue-50 focus:text-blue-700">{m.user.name}</SelectItem>
                                             );
                                         })}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="link" className="h-auto p-0 text-xs text-blue-600 justify-start" onClick={() => setAssignee("current_user")}>
+                                <Button variant="link" className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700 justify-start transition-colors" onClick={() => setAssignee("current_user")}>
                                     Assign to me
                                 </Button>
                             </div>
@@ -553,19 +529,19 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                                 <label className="text-sm font-semibold text-slate-700">Assigned To (Multiple)</label>
                                 <Popover open={isAssignedToOpen} onOpenChange={setIsAssignedToOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full h-11 justify-between bg-white border-slate-200 shadow-sm hover:bg-slate-50 hover:border-blue-400 transition-all">
-                                            <span className="truncate">{assignedTo.length ? `${assignedTo.length} selected` : "Select users..."}</span>
+                                        <Button variant="outline" className="w-full h-12 justify-between bg-white border-slate-300 shadow-sm hover:bg-slate-50 hover:border-blue-400 hover:shadow-md focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
+                                            <span className="truncate text-sm">{assignedTo.length ? `${assignedTo.length} selected` : "Select users..."}</span>
                                             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-full p-0" align="start">
+                                    <PopoverContent className="w-full p-0 border-slate-200 shadow-lg" align="start">
                                         <Command>
-                                            <CommandInput placeholder="Search users..." />
+                                            <CommandInput placeholder="Search users..." className="h-10" />
                                             <CommandList>
-                                                <CommandEmpty>No users found.</CommandEmpty>
+                                                <CommandEmpty className="py-6 text-center text-sm text-slate-500">No users found.</CommandEmpty>
                                                 <CommandGroup>
-                                                    <CommandItem onSelect={() => toggleAssignedTo((user as any)?.name || "Me")}>
-                                                        <Check className={cn("mr-2 h-4 w-4", assignedTo.includes((user as any)?.name || "Me") ? "opacity-100" : "opacity-0")} />
+                                                    <CommandItem onSelect={() => toggleAssignedTo((user as any)?.name || "Me")} className="hover:bg-slate-50 aria-selected:bg-blue-50 aria-selected:text-blue-700">
+                                                        <Check className={cn("mr-2 h-4 w-4 text-blue-600", assignedTo.includes((user as any)?.name || "Me") ? "opacity-100" : "opacity-0")} />
                                                         {(user as any)?.name || "Me"} (Current User)
                                                     </CommandItem>
                                                     {availableAssignees.map((m: any) => {
@@ -575,8 +551,8 @@ export function CreateTaskDialog({ isOpen, onClose, initialData, onDelete }: Cre
                                                         if (name === ((user as any)?.name)) return null;
 
                                                         return (
-                                                            <CommandItem key={m.user._id} onSelect={() => toggleAssignedTo(name)}>
-                                                                <Check className={cn("mr-2 h-4 w-4", assignedTo.includes(name) ? "opacity-100" : "opacity-0")} />
+                                                            <CommandItem key={m.user._id} onSelect={() => toggleAssignedTo(name)} className="hover:bg-slate-50 aria-selected:bg-blue-50 aria-selected:text-blue-700">
+                                                                <Check className={cn("mr-2 h-4 w-4 text-blue-600", assignedTo.includes(name) ? "opacity-100" : "opacity-0")} />
                                                                 {name}
                                                             </CommandItem>
                                                         );

@@ -16,8 +16,7 @@ const navItems = [
   { id: "list", label: "List" },
   { id: "calendar", label: "Calendar" },
   { id: "approvals", label: "Request" },
-  { id: "forms", label: "Forms" },
-  { id: "pages", label: "Pages" },
+
   { id: "attachments", label: "Attachments" },
   { id: "issues", label: "Issues" },
   { id: "reports", label: "Reports" },
